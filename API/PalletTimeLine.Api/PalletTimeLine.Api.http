@@ -1,0 +1,6 @@
+@PalletTimeLine.Api_HostAddress = http://localhost:5101
+
+GET {{PalletTimeLine.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

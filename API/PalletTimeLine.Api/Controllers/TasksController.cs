@@ -1,0 +1,55 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PalletTimeLine.Api.Data;
+using PalletTimeLine.Api.DTOs;
+using PalletTimeLine.Api.Models;
+
+namespace PalletTimeLine.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class TasksController : ControllerBase
+{
+    private readonly PalletTimelineDbContext _db;
+
+    public TasksController(PalletTimelineDbContext db)
+    {
+        _db = db;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks()
+    {
+        var tasks = await _db.Tasks.AsNoTracking()
+            .Select(t => new TaskDto(t.Id, t.Task, t.TaskEn, t.Who, t.Date, t.Status, t.Category, t.Note))
+            .ToListAsync();
+
+        return Ok(tasks);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<TaskDto>> GetTask(int id)
+    {
+        var task = await _db.Tasks.AsNoTracking()
+            .Where(t => t.Id == id)
+            .Select(t => new TaskDto(t.Id, t.Task, t.TaskEn, t.Who, t.Date, t.Status, t.Category, t.Note))
+            .FirstOrDefaultAsync();
+
+        return task is not null ? Ok(task) : NotFound();
+    }
+
+    [HttpPatch("{id}/status")]
+    public async Task<IActionResult> UpdateStatus(int id, TaskStatusUpdateDto request)
+    {
+        var task = await _db.Tasks.FindAsync(id);
+        if (task is null)
+        {
+            return NotFound();
+        }
+
+        task.Status = request.Status;
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+}

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PalletTimeLine — Festiwal 2025</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="data.js"></script>
+<script type="text/babel" src="utils.jsx"></script>
+<script type="text/babel" src="ui.jsx"></script>
+<script type="text/babel" src="tasks.jsx"></script>
+<script type="text/babel" src="costs.jsx"></script>
+<script type="text/babel" src="warehouse.jsx"></script>
+<script type="text/babel" src="overview.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+
+function App() {
+  const [active, setActive] = useState("overview");
+  const [lang, setLang] = useState("pl");
+  const [dark, setDark] = useState(false);
+
+  const [tasks, setTasks] = useState(FESTIVAL_DATA.TASKS);
+  const [costs] = useState(FESTIVAL_DATA.COSTS);
+  const [revenue] = useState(FESTIVAL_DATA.REVENUE);
+  const [items] = useState(FESTIVAL_DATA.WAREHOUSE);
+
+  const [filterPersons, setFilterPersons] = useState([]);
+  const [filterCategories, setFilterCategories] = useState([]);
+  const [tasksQuery, setTasksQuery] = useState("");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    document.documentElement.setAttribute("lang", lang);
+  }, [dark, lang]);
+
+  const t = I18N[lang];
+
+  const titles = {
+    overview: { title: t.overview, sub: t.overviewSub },
+    tasks: { title: t.tasksTitle, sub: `${tasks.length} ${lang === "pl" ? "zadań" : "tasks"}` },
+    costs: { title: t.costsTitle, sub: `${costs.length + revenue.length} ${lang === "pl" ? "pozycji" : "entries"}` },
+    warehouse: { title: t.warehouseTitle, sub: `${items.length} ${lang === "pl" ? "pozycji" : "items"}` },
+  };
+
+  const counts = {
+    tasks: tasks.filter(x => x.status !== "done" && x.status !== "cancelled").length,
+    costs: costs.length,
+    warehouse: items.length,
+  };
+
+  return (
+    <div className="app">
+      <UI.Sidebar active={active} onNav={setActive} lang={lang} counts={counts} />
+      <div className="main">
+        <UI.Topbar
+          title={titles[active].title}
+          sub={titles[active].sub}
+          lang={lang} setLang={setLang}
+          dark={dark} setDark={setDark}
+          onPrint={() => window.print()}
+          onAdd={active !== "overview" ? () => alert(lang === "pl" ? "Dodawanie nowej pozycji (mockup)" : "Add new entry (mockup)") : null} />
+        <div className="content">
+          {active === "overview" && (
+            <OverviewSection lang={lang} tasks={tasks} costs={costs} revenue={revenue} items={items} onNav={setActive} />
+          )}
+          {active === "tasks" && (
+            <TasksSection
+              lang={lang}
+              tasks={tasks} setTasks={setTasks}
+              filterPersons={filterPersons} setFilterPersons={setFilterPersons}
+              filterCategories={filterCategories} setFilterCategories={setFilterCategories}
+              query={tasksQuery} setQuery={setTasksQuery} />
+          )}
+          {active === "costs" && (
+            <CostsSection lang={lang} costs={costs} revenue={revenue} />
+          )}
+          {active === "warehouse" && (
+            <WarehouseSection lang={lang} items={items} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
