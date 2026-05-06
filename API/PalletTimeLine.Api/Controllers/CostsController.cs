@@ -20,7 +20,7 @@ public class CostsController : ControllerBase
     public async Task<ActionResult<IEnumerable<CostDto>>> GetCosts()
     {
         var costs = await _db.Costs.AsNoTracking()
-            .Select(c => new CostDto(c.Id.ToString(), c.Name, c.NameEn, c.Amount, c.Category))
+            .Select(c => new CostDto(c.Id, c.Name, c.NameEn, c.Amount, c.Category))
             .ToListAsync();
 
         return Ok(costs);

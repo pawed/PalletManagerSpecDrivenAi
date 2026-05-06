@@ -1,7 +1,7 @@
 namespace PalletTimeLine.Api.DTOs;
 
 public record TaskDto(
-    int Id,
+    Guid Id,
     string Task,
     string TaskEn,
     string[] Who,
@@ -10,22 +10,44 @@ public record TaskDto(
     string Category,
     string? Note);
 
+public record UserDto(
+    Guid Id,
+    string FirstName,
+    string LastName,
+    string UserName,
+    string DisplayName,
+    bool IsActive);
+
+public record UserCreateDto(
+    string FirstName,
+    string LastName,
+    string UserName,
+    string DisplayName,
+    bool IsActive);
+
+public record UserUpdateDto(
+    string FirstName,
+    string LastName,
+    string UserName,
+    string DisplayName,
+    bool IsActive);
+
 public record CostDto(
-    string Id,
+    Guid Id,
     string Name,
     string NameEn,
     decimal Amount,
     string Category);
 
 public record RevenueDto(
-    string Id,
+    Guid Id,
     string Name,
     string NameEn,
     decimal Amount,
     string Category);
 
 public record WarehouseItemDto(
-    string Id,
+    Guid Id,
     string Name,
     string NameEn,
     decimal Qty,
@@ -47,4 +69,4 @@ public record OverviewDto(
 
 public record TaskStatusUpdateDto(string Status);
 
-public record LookupDto(string Id, string Label);
+public record LookupDto(Guid Id, string Label);

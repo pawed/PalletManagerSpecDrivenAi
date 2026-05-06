@@ -2,7 +2,7 @@ namespace PalletTimeLine.Api.Models;
 
 public class WarehouseItem
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string NameEn { get; set; } = string.Empty;
     public decimal Qty { get; set; }
