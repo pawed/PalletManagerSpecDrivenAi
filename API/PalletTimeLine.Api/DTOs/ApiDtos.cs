@@ -2,8 +2,7 @@ namespace PalletTimeLine.Api.DTOs;
 
 public record TaskDto(
     Guid Id,
-    string Task,
-    string TaskEn,
+    string Task,  
     string[] Who,
     string? Date,
     string Status,
@@ -35,21 +34,18 @@ public record UserUpdateDto(
 public record CostDto(
     Guid Id,
     string Name,
-    string NameEn,
     decimal Amount,
     string Category);
 
 public record RevenueDto(
     Guid Id,
     string Name,
-    string NameEn,
     decimal Amount,
     string Category);
 
 public record WarehouseItemDto(
     Guid Id,
     string Name,
-    string NameEn,
     decimal Qty,
     string Unit,
     string Location,

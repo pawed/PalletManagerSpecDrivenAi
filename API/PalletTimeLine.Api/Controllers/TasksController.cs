@@ -20,12 +20,11 @@ public class TasksController : ControllerBase
     public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks()
     {
         var tasks = await _db.Tasks.AsNoTracking()
-            .Include(t => t.Who)
+            .Include(t => t.Responsible)
             .Select(t => new TaskDto(
                 t.Id,
-                t.Task,
-                t.TaskEn,
-                t.Who.Select(u => u.DisplayName).ToArray(),
+                t.Name,
+                t.Responsible.Select(u => u.DisplayName).ToArray(),
                 t.Date,
                 t.Status,
                 t.Category,
@@ -39,13 +38,12 @@ public class TasksController : ControllerBase
     public async Task<ActionResult<TaskDto>> GetTask(Guid id)
     {
         var task = await _db.Tasks.AsNoTracking()
-            .Include(t => t.Who)
+            .Include(t => t.Responsible)
             .Where(t => t.Id == id)
             .Select(t => new TaskDto(
                 t.Id,
-                t.Task,
-                t.TaskEn,
-                t.Who.Select(u => u.DisplayName).ToArray(),
+                t.Name,
+                t.Responsible.Select(u => u.DisplayName).ToArray(),
                 t.Date,
                 t.Status,
                 t.Category,

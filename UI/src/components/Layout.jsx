@@ -1,17 +1,18 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { I18N } from '../data/festival';
 import { daysToFestival } from '../data/utils';
-import { IconHome, IconCheck, IconCoin, IconBox } from './Icons';
+import { IconHome, IconCheck, IconCoin, IconBox, IconSun, IconMoon , IconPrint, IconPlus } from './Icons';
 
-export const Sidebar = ({ active, onNav, lang, counts }) => {
-  const t = I18N[lang];
+export const Sidebar = ({ lang, counts }) => {
+  const t    = I18N[lang];
   const days = daysToFestival();
 
   const items = [
-    { id: "overview", label: t.navOverview, icon: IconHome },
-    { id: "tasks", label: t.navTasks, icon: IconCheck, count: counts.tasks },
-    { id: "costs", label: t.navCosts, icon: IconCoin, count: counts.costs },
-    { id: "warehouse", label: t.navWarehouse, icon: IconBox, count: counts.warehouse },
+    { to: "/overview",  label: t.navOverview,  icon: IconHome },
+    { to: "/tasks",     label: t.navTasks,     icon: IconCheck, count: counts.tasks },
+    { to: "/costs",     label: t.navCosts,     icon: IconCoin,  count: counts.costs },
+    { to: "/warehouse", label: t.navWarehouse, icon: IconBox,   count: counts.warehouse },
   ];
 
   return (
@@ -29,15 +30,15 @@ export const Sidebar = ({ active, onNav, lang, counts }) => {
       {items.map(it => {
         const Icon = it.icon;
         return (
-          <button
-            key={it.id}
-            className={`nav-item ${active === it.id ? "nav-item--active" : ""}`}
-            onClick={() => onNav(it.id)}
+          <NavLink
+            key={it.to}
+            to={it.to}
+            className={({ isActive }) => `nav-item${isActive ? " nav-item--active" : ""}`}
           >
             <Icon />
             <span>{it.label}</span>
             {it.count != null && <span className="nav-item__count">{it.count}</span>}
-          </button>
+          </NavLink>
         );
       })}
 

@@ -20,7 +20,7 @@ public class WarehouseController : ControllerBase
     public async Task<ActionResult<IEnumerable<WarehouseItemDto>>> GetWarehouseItems()
     {
         var items = await _db.WarehouseItems.AsNoTracking()
-            .Select(i => new WarehouseItemDto(i.Id, i.Name, i.NameEn, i.Qty, i.Unit, i.Location, i.Category, i.Note))
+            .Select(i => new WarehouseItemDto(i.Id, i.Name, i.Qty, i.Unit, i.Location, i.Category, i.Note))
             .ToListAsync();
 
         return Ok(items);

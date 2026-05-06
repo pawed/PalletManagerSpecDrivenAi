@@ -20,7 +20,7 @@ public class RevenueController : ControllerBase
     public async Task<ActionResult<IEnumerable<RevenueDto>>> GetRevenue()
     {
         var revenue = await _db.Revenues.AsNoTracking()
-            .Select(r => new RevenueDto(r.Id, r.Name, r.NameEn, r.Amount, r.Category))
+            .Select(r => new RevenueDto(r.Id, r.Name, r.Amount, r.Category))
             .ToListAsync();
 
         return Ok(revenue);
