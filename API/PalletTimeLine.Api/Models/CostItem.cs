@@ -9,5 +9,14 @@ public class CostItem
     public decimal Amount { get; set; }
     public string Category { get; set; } = string.Empty;
 
-    public Editions? Edition { get; set; }
+    public EditionItem Edition { get; set; }
 }
+
+public enum CostCategory
+{
+    Venue = 0,
+    Equipment = 1,
+    Personnel = 2,
+    Marketing = 3,
+    Other = 4
+}   

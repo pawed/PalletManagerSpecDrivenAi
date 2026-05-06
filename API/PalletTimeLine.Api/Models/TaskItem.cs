@@ -11,5 +11,14 @@ public class TaskItem
     public string Category { get; set; } = string.Empty;
     public string? Note { get; set; }
 
-    public Editions? Edition { get; set; }
+    public Guid EditionId { get; set; }
+    public EditionItem Edition { get; set; }
+}
+
+public enum TaskItemStatus
+{
+    NotStarted = 0,
+    InProgress = 1,
+    Completed = 2,
+    Blocked = 3
 }

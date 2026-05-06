@@ -11,3 +11,10 @@ public class WarehouseItem
     public string Category { get; set; } = string.Empty;
     public string? Note { get; set; }
 }
+
+public enum WarehouseCategory
+{
+    Equipment = 0,
+    Material = 1,
+    Other = 2
+}
