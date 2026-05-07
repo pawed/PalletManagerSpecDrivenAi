@@ -1,33 +1,51 @@
 namespace PalletTimeLine.Api.DTOs;
 
 public record TaskDto(
-    int Id,
-    string Task,
-    string TaskEn,
+    Guid Id,
+    string Task,  
     string[] Who,
     string? Date,
     string Status,
     string Category,
     string? Note);
 
+public record UserDto(
+    Guid Id,
+    string FirstName,
+    string LastName,
+    string UserName,
+    string DisplayName,
+    bool IsActive);
+
+public record UserCreateDto(
+    string FirstName,
+    string LastName,
+    string UserName,
+    string DisplayName,
+    bool IsActive);
+
+public record UserUpdateDto(
+    string FirstName,
+    string LastName,
+    string UserName,
+    string DisplayName,
+    bool IsActive);
+
 public record CostDto(
-    string Id,
+    Guid Id,
     string Name,
-    string NameEn,
     decimal Amount,
     string Category);
 
 public record RevenueDto(
-    string Id,
+    Guid Id,
     string Name,
-    string NameEn,
     decimal Amount,
     string Category);
 
 public record WarehouseItemDto(
-    string Id,
+    Guid Id,
     string Name,
-    string NameEn,
     decimal Qty,
     string Unit,
     string Location,
@@ -47,4 +65,44 @@ public record OverviewDto(
 
 public record TaskStatusUpdateDto(string Status);
 
-public record LookupDto(string Id, string Label);
+public record LookupDto(Guid Id, string Label);
+
+// AuditLog DTOs
+public record AuditLogDto(
+    Guid Id,
+    string EntityType,
+    Guid EntityId,
+    string Action,
+    Guid ChangedBy,
+    string ChangedByName,
+    DateTime Timestamp,
+    string? OldValues);
+
+public record AuditLogCreateDto(
+    string EntityType,
+    Guid EntityId,
+    string Action,
+    Guid ChangedBy,
+    string? OldValues);
+
+public record AuditLogQueryDto(
+    string? EntityType = null,
+    Guid? EntityId = null,
+    int PageSize = 50,
+    int Page = 1);
+
+// TaskComment DTOs
+public record TaskCommentDto(
+    Guid Id,
+    string Content,
+    Guid AuthorId,
+    string AuthorName,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt);
+
+public record TaskCommentCreateDto(
+    string Content,
+    Guid AuthorId);
+
+public record TaskCommentUpdateDto(
+    string Content);

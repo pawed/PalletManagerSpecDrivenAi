@@ -1,10 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   server: {
     port: 3000,
-    open: true
+    open: true,
+    historyApiFallback: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5101',
+        changeOrigin: true,
+      },
+    },
   }
 })
