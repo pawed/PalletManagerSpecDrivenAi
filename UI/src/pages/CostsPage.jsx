@@ -1,88 +1,76 @@
-import React, { useState, useMemo } from 'react';
-import { I18N } from '../data/festival';
+import React, { useMemo } from 'react';
+import { I18N } from '../data/i18n';
 import { fmtPLN } from '../data/utils';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { useAppContext } from '../context/AppContext';
 
 const CostsPage = () => {
   const { lang, costs, revenue } = useAppContext();
   const t = I18N[lang];
-  const [tab, setTab] = useState("overview");
 
-  const totalCosts   = useMemo(() => costs.reduce((s, c) => s + c.amount, 0),   [costs]);
+  const totalCosts   = useMemo(() => costs.reduce((s, c)   => s + c.amount, 0), [costs]);
   const totalRevenue = useMemo(() => revenue.reduce((s, r) => s + r.amount, 0), [revenue]);
   const balance = totalRevenue - totalCosts;
 
+  const Row = ({ name, amount }) => (
+    <div className="grid gap-2.5 py-2 border-t border-border items-center" style={{ gridTemplateColumns: "1fr auto" }}>
+      <span>{name}</span>
+      <span className="font-mono font-semibold">{fmtPLN(amount)}</span>
+    </div>
+  );
+
   return (
-    <>
-      <div className="tabs">
-        <button data-active={tab === "overview"} onClick={() => setTab("overview")}>{t.overview}</button>
-        <button data-active={tab === "costs"}    onClick={() => setTab("costs")}>{t.costs}</button>
-        <button data-active={tab === "revenue"}  onClick={() => setTab("revenue")}>{t.revenue}</button>
-      </div>
+    <Tabs defaultValue="overview">
+      <TabsList className="mb-5">
+        <TabsTrigger value="overview">{t.overview}</TabsTrigger>
+        <TabsTrigger value="costs">{t.costs}</TabsTrigger>
+        <TabsTrigger value="revenue">{t.revenue}</TabsTrigger>
+      </TabsList>
 
-      <div className="card">
-        <div className="card__head">
-          <div className="card__title">{t.balance}</div>
-          <div className="card__sub">{lang === "pl" ? "edycja 2025" : "2025 edition"}</div>
+      {/* Balance summary — always visible */}
+      <div className="bg-card border border-border rounded-[10px] px-5 py-4 mb-5">
+        <div className="flex items-baseline justify-between mb-4">
+          <p className="text-[13px] font-semibold tracking-tight">{t.balance}</p>
+          <p className="text-[11px] text-muted-foreground font-mono">{lang === "pl" ? "edycja 2025" : "2025 edition"}</p>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginTop: 16 }}>
+        <div className="grid grid-cols-3 gap-5">
           <div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>{t.revenue}</div>
-            <div style={{ fontSize: 20, fontWeight: 600, color: "var(--status-done)" }}>
-              {fmtPLN(totalRevenue)}
-            </div>
+            <p className="text-[12px] text-muted-foreground mb-1">{t.revenue}</p>
+            <p className="text-xl font-semibold text-status-done">{fmtPLN(totalRevenue)}</p>
           </div>
           <div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>{t.costs}</div>
-            <div style={{ fontSize: 20, fontWeight: 600, color: "var(--chart-4)" }}>
-              {fmtPLN(totalCosts)}
-            </div>
+            <p className="text-[12px] text-muted-foreground mb-1">{t.costs}</p>
+            <p className="text-xl font-semibold text-[oklch(0.6_0.15_25)]">{fmtPLN(totalCosts)}</p>
           </div>
           <div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>{t.balance}</div>
-            <div style={{ fontSize: 20, fontWeight: 600, color: balance >= 0 ? "var(--status-done)" : "var(--chart-4)" }}>
+            <p className="text-[12px] text-muted-foreground mb-1">{t.balance}</p>
+            <p className={`text-xl font-semibold ${balance >= 0 ? "text-status-done" : "text-[oklch(0.6_0.15_25)]"}`}>
               {balance >= 0 ? "+" : ""}{fmtPLN(balance)}
-            </div>
+            </p>
           </div>
         </div>
       </div>
 
-      {tab === "costs" && (
-        <div className="card" style={{ marginTop: 20 }}>
-          <div className="card__head">
-            <div className="card__title">{t.costs}</div>
-            <div className="card__sub">{costs.length}</div>
+      <TabsContent value="costs">
+        <div className="bg-card border border-border rounded-[10px] px-5 py-4">
+          <div className="flex items-baseline justify-between mb-2">
+            <p className="text-[13px] font-semibold tracking-tight">{t.costs}</p>
+            <p className="text-[11px] text-muted-foreground font-mono">{costs.length}</p>
           </div>
-          {costs.map(c => (
-            <div
-              key={c.id}
-              style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, padding: "8px 0", borderTop: "1px solid var(--border)", alignItems: "center" }}
-            >
-              <div>{lang === "pl" ? c.name : c.nameEn}</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmtPLN(c.amount)}</div>
-            </div>
-          ))}
+          {costs.map(c => <Row key={c.id} name={c.name} amount={c.amount} />)}
         </div>
-      )}
+      </TabsContent>
 
-      {tab === "revenue" && (
-        <div className="card" style={{ marginTop: 20 }}>
-          <div className="card__head">
-            <div className="card__title">{t.revenue}</div>
-            <div className="card__sub">{revenue.length}</div>
+      <TabsContent value="revenue">
+        <div className="bg-card border border-border rounded-[10px] px-5 py-4">
+          <div className="flex items-baseline justify-between mb-2">
+            <p className="text-[13px] font-semibold tracking-tight">{t.revenue}</p>
+            <p className="text-[11px] text-muted-foreground font-mono">{revenue.length}</p>
           </div>
-          {revenue.map(r => (
-            <div
-              key={r.id}
-              style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, padding: "8px 0", borderTop: "1px solid var(--border)", alignItems: "center" }}
-            >
-              <div>{lang === "pl" ? r.name : r.nameEn}</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmtPLN(r.amount)}</div>
-            </div>
-          ))}
+          {revenue.map(r => <Row key={r.id} name={r.name} amount={r.amount} />)}
         </div>
-      )}
-    </>
+      </TabsContent>
+    </Tabs>
   );
 };
 

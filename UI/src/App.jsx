@@ -1,13 +1,13 @@
 import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { I18N } from './data/festival';
+import { I18N } from './data/i18n';
 import { Sidebar, Topbar } from './components/Layout';
 import OverviewPage  from './pages/OverviewPage';
 import TasksPage     from './pages/TasksPage';
 import CostsPage     from './pages/CostsPage';
 import WarehousePage from './pages/WarehousePage';
 import { useAppContext } from './context/AppContext';
-import './styles/globals.css';
+import './styles/index.css';
 
 function App() {
   const { lang, setLang, dark, setDark, tasks, costs, revenue, items } = useAppContext();
@@ -21,7 +21,7 @@ function App() {
     "/warehouse": { title: t.warehouseTitle, sub: `${items.length} ${lang === "pl" ? "pozycji" : "items"}` },
   };
 
-  const meta      = pageMeta[location.pathname] ?? pageMeta["/overview"];
+  const meta     = pageMeta[location.pathname] ?? pageMeta["/overview"];
   const isOverview = location.pathname === "/overview" || location.pathname === "/";
 
   const counts = {
@@ -31,9 +31,9 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <div className="grid grid-cols-[232px_1fr] min-h-screen bg-background text-foreground">
       <Sidebar lang={lang} counts={counts} />
-      <div className="main">
+      <div className="min-w-0 flex flex-col">
         <Topbar
           title={meta.title}
           sub={meta.sub}
@@ -46,7 +46,7 @@ function App() {
             ? () => alert(lang === "pl" ? "Dodawanie nowej pozycji (mockup)" : "Add new entry (mockup)")
             : null}
         />
-        <div className="content">
+        <div className="p-7 pb-16 flex-1 min-w-0 overflow-y-auto">
           <Routes>
             <Route index element={<Navigate to="/overview" replace />} />
             <Route path="/overview"  element={<OverviewPage />} />

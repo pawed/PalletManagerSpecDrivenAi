@@ -1,22 +1,26 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { FESTIVAL_DATA } from '../data/festival';
+import { TASKS } from '../data/tasks';
+import { COSTS } from '../data/costs';
+import { REVENUE } from '../data/revenue';
+import { WAREHOUSE } from '../data/warehouse';
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [lang, setLang] = useState("pl");
-  const [dark, setDark] = useState(false);
-  const [tasks, setTasks] = useState(FESTIVAL_DATA.TASKS);
-  const [costs]   = useState(FESTIVAL_DATA.COSTS);
-  const [revenue] = useState(FESTIVAL_DATA.REVENUE);
-  const [items]   = useState(FESTIVAL_DATA.WAREHOUSE);
+  const [dark, setDark] =            useState(false);
+  const [tasks, setTasks] = useState(TASKS);
+  const [costs] = useState(COSTS);
+  const [revenue] = useState(REVENUE);
+  const [items] = useState(WAREHOUSE);
 
-  const [filterPersons,     setFilterPersons]     = useState([]);
-  const [filterCategories,  setFilterCategories]  = useState([]);
-  const [tasksQuery,        setTasksQuery]        = useState("");
+  const [filterPersons, setFilterPersons] = useState([]);
+  const [filterCategories, setFilterCategories] = useState([]);
+  const [filterStatuses, setFilterStatuses] = useState([]);
+  const [tasksQuery, setTasksQuery] = useState("");
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    document.documentElement.classList.toggle("dark", dark);
     document.documentElement.setAttribute("lang", lang);
   }, [dark, lang]);
 
@@ -26,9 +30,10 @@ export function AppProvider({ children }) {
       dark, setDark,
       tasks, setTasks,
       costs, revenue, items,
-      filterPersons,    setFilterPersons,
+      filterPersons, setFilterPersons,
       filterCategories, setFilterCategories,
-      tasksQuery,       setTasksQuery,
+      filterStatuses, setFilterStatuses,
+      tasksQuery, setTasksQuery,
     }}>
       {children}
     </AppContext.Provider>

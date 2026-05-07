@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using PalletTimeLine.Api.Data;
+using PalletTimeLine.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (!string.IsNullOrWhiteSpace(connectionString))

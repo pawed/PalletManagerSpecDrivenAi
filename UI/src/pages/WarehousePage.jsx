@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { I18N, FESTIVAL_DATA } from '../data/festival';
-import { IconSearch } from '../components/Icons';
+import { Search } from 'lucide-react';
+import { I18N } from '../data/i18n';
+import { WH_CATEGORIES, LOCATIONS } from '../data/warehouse';
+import { Input } from '../components/ui/input';
+import { cn } from '../lib/utils';
 import { useAppContext } from '../context/AppContext';
 
 const WarehousePage = () => {
@@ -12,15 +15,12 @@ const WarehousePage = () => {
   const [query,            setQuery]            = useState("");
 
   const filtered = useMemo(() => items.filter(it => {
-    if (filterCategories.length > 0 && !filterCategories.includes(it.category))  return false;
-    if (filterLocations.length  > 0 && !filterLocations.includes(it.location))   return false;
-    if (query) {
-      const q   = query.toLowerCase();
-      const txt = (lang === "pl" ? it.name : it.nameEn).toLowerCase();
-      if (!txt.includes(q) && !(it.note || "").toLowerCase().includes(q)) return false;
-    }
+    if (filterCategories.length > 0 && !filterCategories.includes(it.category)) return false;
+    if (filterLocations.length  > 0 && !filterLocations.includes(it.location))  return false;
+    if (query && !it.name.toLowerCase().includes(query.toLowerCase()) &&
+        !(it.note || "").toLowerCase().includes(query.toLowerCase()))            return false;
     return true;
-  }), [items, filterCategories, filterLocations, query, lang]);
+  }), [items, filterCategories, filterLocations, query]);
 
   const locCounts = useMemo(() => {
     const m = {};
@@ -28,81 +28,107 @@ const WarehousePage = () => {
     return m;
   }, [items]);
 
+  const Chip = ({ active, onClick, children }) => (
+    <button
+      onClick={onClick}
+      className={cn(
+        'h-7 px-3 rounded-full border text-[11.5px] font-medium inline-flex items-center gap-1 transition-colors',
+        active
+          ? 'bg-foreground text-background border-foreground'
+          : 'bg-card text-muted-foreground border-border hover:border-[oklch(0.84_0.01_80)] hover:text-foreground'
+      )}
+    >
+      {children}
+    </button>
+  );
+
   return (
     <>
-      <div className="filterbar" style={{ marginBottom: 10 }}>
-        <button
-          className="chip"
-          data-active={filterLocations.length === 0}
-          onClick={() => setFilterLocations([])}
-        >
-          {t.all} <span style={{ opacity: 0.6, marginLeft: 2 }}>({items.length})</span>
-        </button>
-        {FESTIVAL_DATA.LOCATIONS.map(loc => {
+      {/* Location chips */}
+      <div className="flex flex-wrap gap-2 mb-2.5">
+        <Chip active={filterLocations.length === 0} onClick={() => setFilterLocations([])}>
+          {t.all} <span className="opacity-60">({items.length})</span>
+        </Chip>
+        {LOCATIONS.map(loc => {
           const active = filterLocations.includes(loc);
           return (
-            <button
+            <Chip
               key={loc}
-              className="chip"
-              data-active={active}
+              active={active}
               onClick={() =>
                 active
                   ? setFilterLocations(filterLocations.filter(x => x !== loc))
                   : setFilterLocations([...filterLocations, loc])
               }
             >
-              {loc} <span style={{ opacity: 0.6, marginLeft: 2 }}>({locCounts[loc] || 0})</span>
-            </button>
+              {loc} <span className="opacity-60">({locCounts[loc] || 0})</span>
+            </Chip>
           );
         })}
       </div>
 
-      <div className="filterbar">
-        <div style={{ position: "relative" }}>
-          <input
-            type="text"
+      {/* Search + count */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
             placeholder={t.search}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{ paddingLeft: 30 }}
+            onChange={e => setQuery(e.target.value)}
+            className="pl-8 w-56"
           />
-          <div style={{ position: "absolute", left: 9, top: 8, color: "var(--text-dim)" }}>
-            <IconSearch />
-          </div>
         </div>
-        <div style={{ marginLeft: "auto", fontFamily: "var(--font-mono)", fontSize: 11.5, color: "var(--text-muted)" }}>
+        <span className="ml-auto font-mono text-[11.5px] text-muted-foreground">
           {filtered.length} {lang === "pl" ? "pozycji" : "items"}
-        </div>
+        </span>
       </div>
 
-      <div className="table">
-        <div className="table__head">
+      {/* Table */}
+      <div className="bg-card border border-border rounded-[10px] overflow-hidden">
+        <div
+          className="grid gap-3.5 px-3.5 py-3 bg-secondary text-[11px] font-semibold uppercase tracking-widest text-muted-foreground border-b border-border"
+          style={{ gridTemplateColumns: "1fr auto 150px 120px 200px" }}
+        >
           <div>{t.name}</div>
-          <div style={{ textAlign: "right" }}>{t.qty}</div>
+          <div className="text-right">{t.qty}</div>
           <div>{t.category}</div>
           <div>Lokalizacja</div>
           <div>{t.note}</div>
         </div>
+
         {filtered.length === 0 ? (
-          <div className="empty">{lang === "pl" ? "Brak pozycji spełniających filtry" : "No items match filters"}</div>
+          <p className="text-center text-muted-foreground text-[13px] py-10">
+            {lang === "pl" ? "Brak pozycji spełniających filtry" : "No items match filters"}
+          </p>
         ) : (
           filtered.map(it => {
-            const cat = FESTIVAL_DATA.WH_CATEGORIES.find(c => c.id === it.category);
+            const cat = WH_CATEGORIES.find(c => c.id === it.category);
             return (
-              <div key={it.id} className="table__row">
-                <div style={{ fontWeight: 500 }}>{lang === "pl" ? it.name : it.nameEn}</div>
-                <div style={{ fontWeight: 600 }}>
+              <div
+                key={it.id}
+                className="grid gap-3.5 px-3.5 py-3 border-b border-border last:border-b-0 items-center text-[13px] hover:bg-secondary transition-colors"
+                style={{ gridTemplateColumns: "1fr auto 150px 120px 200px" }}
+              >
+                <span className="font-medium">{it.name}</span>
+                <span className="font-semibold">
                   {it.qty}
-                  <span style={{ color: "var(--text-dim)", fontWeight: 400, marginLeft: 3 }}>{it.unit}</span>
+                  <span className="text-muted-foreground font-normal ml-1">{it.unit}</span>
+                </span>
+                <div>
+                  {cat && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-accent text-accent-foreground text-[11px] font-medium">
+                      {cat[lang]}
+                    </span>
+                  )}
                 </div>
-                <div>{cat && <span className="cat-tag">{cat[lang]}</span>}</div>
-                <div><span className="loc-tag">{it.location}</span></div>
-                <div
-                  style={{ color: "var(--text-muted)", fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
-                  title={it.note}
-                >
+                <div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-accent text-accent-foreground text-[11px] font-medium">
+                    {it.location}
+                  </span>
+                </div>
+                <span className="text-muted-foreground text-[12px] truncate" title={it.note}>
                   {it.note || "—"}
-                </div>
+                </span>
               </div>
             );
           })

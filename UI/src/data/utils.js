@@ -1,4 +1,4 @@
-import { I18N } from './festival';
+import { I18N } from './i18n';
 
 // Pretend "today" = July 22, 2025 (~17 days before festival)
 export const TODAY = new Date(2025, 6, 22);

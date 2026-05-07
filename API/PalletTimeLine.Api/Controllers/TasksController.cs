@@ -23,12 +23,12 @@ public class TasksController : ControllerBase
             .Include(t => t.Responsible)
             .Select(t => new TaskDto(
                 t.Id,
-                t.Name,
+                t.Title,
                 t.Responsible.Select(u => u.DisplayName).ToArray(),
                 t.Date,
                 t.Status,
                 t.Category,
-                t.Note))
+                t.Description))
             .ToListAsync();
 
         return Ok(tasks);
@@ -42,12 +42,12 @@ public class TasksController : ControllerBase
             .Where(t => t.Id == id)
             .Select(t => new TaskDto(
                 t.Id,
-                t.Name,
+                t.Title,
                 t.Responsible.Select(u => u.DisplayName).ToArray(),
                 t.Date,
                 t.Status,
                 t.Category,
-                t.Note))
+                t.Description))
             .FirstOrDefaultAsync();
 
         return task is not null ? Ok(task) : NotFound();

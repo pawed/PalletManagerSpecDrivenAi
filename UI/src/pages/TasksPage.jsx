@@ -1,7 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { I18N } from '../data/festival';
+import { Search } from 'lucide-react';
+import { I18N } from '../data/i18n';
+import { PEOPLE, TASK_CATEGORIES } from '../data/tasks';
 import { StatusPill } from '../components/Layout';
-import { IconSearch } from '../components/Icons';
+import { Input } from '../components/ui/input';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
+import { MultiSelect } from '../components/ui/multi-select';
 import Harmonogram from '../components/Harmonogram';
 import { useAppContext } from '../context/AppContext';
 
@@ -10,22 +14,28 @@ const TasksPage = () => {
     lang, tasks, setTasks,
     filterPersons,    setFilterPersons,
     filterCategories, setFilterCategories,
+    filterStatuses,   setFilterStatuses,
     tasksQuery: query, setTasksQuery: setQuery,
   } = useAppContext();
 
   const t = I18N[lang];
-  const [tab, setTab] = useState("list");
+
+  const personOptions = PEOPLE.map(p => ({ value: p, label: p }));
+  const statusOptions = [
+    { value: "todo",        label: t.todo        },
+    { value: "in-progress", label: t.inProgress  },
+    { value: "done",        label: t.done        },
+    { value: "cancelled",   label: t.cancelled   },
+  ];
 
   const filtered = useMemo(() => tasks.filter(task => {
-    if (filterPersons.length > 0 && !task.who.some(w => filterPersons.includes(w))) return false;
-    if (filterCategories.length > 0 && !filterCategories.includes(task.category))    return false;
-    if (query) {
-      const q   = query.toLowerCase();
-      const txt = (lang === "pl" ? task.task : task.taskEn).toLowerCase();
-      if (!txt.includes(q) && !(task.note || "").toLowerCase().includes(q)) return false;
-    }
+    if (filterPersons.length   > 0 && !task.who.some(w => filterPersons.includes(w))) return false;
+    if (filterCategories.length > 0 && !filterCategories.includes(task.category))     return false;
+    if (filterStatuses.length  > 0 && !filterStatuses.includes(task.status))          return false;
+    if (query && !task.task.toLowerCase().includes(query.toLowerCase()) &&
+        !(task.note || "").toLowerCase().includes(query.toLowerCase()))                return false;
     return true;
-  }), [tasks, filterPersons, filterCategories, query, lang]);
+  }), [tasks, filterPersons, filterCategories, filterStatuses, query]);
 
   const grouped = useMemo(() => {
     const order = ["in-progress", "todo", "done", "cancelled"];
@@ -46,74 +56,85 @@ const TasksPage = () => {
     setTasks(tasks.map(t => t.id === id ? { ...t, status: t.status === "done" ? "todo" : "done" } : t));
 
   return (
-    <>
-      <div className="tabs">
-        <button data-active={tab === "list"}  onClick={() => setTab("list")}>
-          {t.tabList}
-        </button>
-        <button data-active={tab === "gantt"} onClick={() => setTab("gantt")}>
-          {t.tabGantt}
-        </button>
-      </div>
+    <Tabs defaultValue="list">
+      {/* Tabs + Filters row */}
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        <TabsList>
+          <TabsTrigger value="list">{t.tabList}</TabsTrigger>
+          <TabsTrigger value="gantt">{t.tabGantt}</TabsTrigger>
+        </TabsList>
 
-      <div className="filterbar">
-        <div style={{ position: "relative" }}>
-          <input
-            type="text"
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
             placeholder={t.search}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{ paddingLeft: 30 }}
+            onChange={e => setQuery(e.target.value)}
+            className="pl-8 w-56"
           />
-          <div style={{ position: "absolute", left: 9, top: 8, color: "var(--text-dim)" }}>
-            <IconSearch />
-          </div>
         </div>
+
+        <MultiSelect
+          options={personOptions}
+          selected={filterPersons}
+          onChange={setFilterPersons}
+          placeholder={lang === "pl" ? "Osoby" : "People"}
+        />
+        <MultiSelect
+          options={statusOptions}
+          selected={filterStatuses}
+          onChange={setFilterStatuses}
+          placeholder={t.status}
+        />
       </div>
 
-      {tab === "list" ? (
-        <>
-          {Object.entries(grouped).map(([status, items]) => {
-            if (items.length === 0) return null;
-            return (
-              <div className="task-group" key={status}>
-                <div className="task-group__head">
-                  <StatusPill status={status} lang={lang} />
-                  <span className="task-group__count">{items.length}</span>
-                  <div className="task-group__bar" />
-                </div>
-                <div className="task-list">
-                  {items.map(task => (
-                    <div key={task.id} className="task-row">
-                      <input
-                        type="checkbox"
-                        checked={task.status === "done"}
-                        onChange={() => toggleStatus(task.id)}
-                        style={{ width: 18, height: 18 }}
-                      />
-                      <div
-                        className="task-row__title"
-                        style={task.status === "done"
-                          ? { textDecoration: "line-through", color: "var(--text-muted)" }
-                          : {}}
-                      >
-                        {lang === "pl" ? task.task : task.taskEn}
-                        {task.note && <div className="task-row__note">{task.note}</div>}
-                      </div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: "var(--text-muted)" }}>
-                        {task.date || "—"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+      {/* List view */}
+      <TabsContent value="list">
+        {Object.entries(grouped).map(([status, items]) => {
+          if (items.length === 0) return null;
+          return (
+            <div className="mb-5" key={status}>
+              <div className="flex items-center gap-2.5 mb-2 px-1">
+                <StatusPill status={status} lang={lang} />
+                <span className="font-mono text-[11px] text-muted-foreground">{items.length}</span>
+                <div className="flex-1 h-px bg-border" />
               </div>
-            );
-          })}
-        </>
-      ) : (
+              <div className="bg-card border border-border rounded-[10px] overflow-hidden">
+                {items.map(task => (
+                  <div
+                    key={task.id}
+                    className="grid gap-3.5 items-center px-3.5 py-2.5 border-b border-border last:border-b-0 hover:bg-secondary transition-colors"
+                    style={{ gridTemplateColumns: "auto 1fr auto" }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={task.status === "done"}
+                      onChange={() => toggleStatus(task.id)}
+                      className="w-[18px] h-[18px] accent-foreground"
+                    />
+                    <div
+                      className="text-[13px] font-medium tracking-tight"
+                      style={task.status === "done" ? { textDecoration: "line-through", color: "var(--muted-foreground)" } : {}}
+                    >
+                      {task.task}
+                      {task.note && (
+                        <p className="text-[11.5px] text-muted-foreground mt-0.5 font-normal">{task.note}</p>
+                      )}
+                    </div>
+                    <span className="font-mono text-[11.5px] text-muted-foreground">{task.date || "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </TabsContent>
+
+      {/* Gantt view */}
+      <TabsContent value="gantt">
         <Harmonogram lang={lang} tasks={filtered} />
-      )}
-    </>
+      </TabsContent>
+    </Tabs>
   );
 };
 
