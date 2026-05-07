@@ -1,12 +1,35 @@
 import React, { useMemo } from 'react';
+import { Loader2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { I18N } from '../data/i18n';
 import { fmtPLN } from '../data/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { useAppContext } from '../context/AppContext';
+import * as costService    from '../services/costService.js';
+import * as revenueService from '../services/revenueService.js';
 
 const CostsPage = () => {
-  const { lang, costs, revenue } = useAppContext();
+  const { lang } = useAppContext();
   const t = I18N[lang];
+  const queryClient = useQueryClient();
+
+  const { data: costs = [], isLoading: loadingCosts, isFetching: fetchingCosts } = useQuery({
+    queryKey: ['costs'],
+    queryFn: costService.getAll,
+    staleTime: Infinity,
+    onError: err => toast.error('Błąd ładowania kosztów', { description: err.message }),
+  });
+
+  const { data: revenue = [], isLoading: loadingRevenue } = useQuery({
+    queryKey: ['revenue'],
+    queryFn: revenueService.getAll,
+    staleTime: Infinity,
+    onError: err => toast.error('Błąd ładowania przychodów', { description: err.message }),
+  });
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['costs'] })
+    .then(() => queryClient.invalidateQueries({ queryKey: ['revenue'] }));
 
   const totalCosts   = useMemo(() => costs.reduce((s, c)   => s + c.amount, 0), [costs]);
   const totalRevenue = useMemo(() => revenue.reduce((s, r) => s + r.amount, 0), [revenue]);
@@ -19,15 +42,40 @@ const CostsPage = () => {
     </div>
   );
 
-  return (
-    <Tabs defaultValue="overview">
-      <TabsList className="mb-5">
-        <TabsTrigger value="overview">{t.overview}</TabsTrigger>
-        <TabsTrigger value="costs">{t.costs}</TabsTrigger>
-        <TabsTrigger value="revenue">{t.revenue}</TabsTrigger>
-      </TabsList>
+  if (loadingCosts || loadingRevenue) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
-      {/* Balance summary — always visible */}
+  const isFetching = fetchingCosts;
+
+  return (
+    <div className="relative">
+      {isFetching && !(loadingCosts || loadingRevenue) && (
+        <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-[1px] flex items-center justify-center rounded-lg">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+    <Tabs defaultValue="overview">
+      <div className="flex items-center gap-3 mb-5">
+        <TabsList>
+          <TabsTrigger value="overview">{t.overview}</TabsTrigger>
+          <TabsTrigger value="costs">{t.costs}</TabsTrigger>
+          <TabsTrigger value="revenue">{t.revenue}</TabsTrigger>
+        </TabsList>
+        <button
+          onClick={refresh}
+          className="ml-auto inline-flex items-center gap-1.5 px-3 h-8 rounded-md border border-border text-[12px] text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+        >
+          <RefreshCw className="h-3 w-3" />
+          {lang === "pl" ? "Odśwież" : "Refresh"}
+        </button>
+      </div>
+
+      {/* Balance summary */}
       <div className="bg-card border border-border rounded-[10px] px-5 py-4 mb-5">
         <div className="flex items-baseline justify-between mb-4">
           <p className="text-[13px] font-semibold tracking-tight">{t.balance}</p>
@@ -71,6 +119,7 @@ const CostsPage = () => {
         </div>
       </TabsContent>
     </Tabs>
+    </div>
   );
 };
 

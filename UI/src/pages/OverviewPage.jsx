@@ -1,24 +1,49 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Loader2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { I18N } from '../data/i18n';
-import { LOCATIONS } from '../data/warehouse';
 import { fmtPLN, isoDate, TODAY } from '../data/utils';
 import { Avatars } from '../components/Layout';
 import { useAppContext } from '../context/AppContext';
+import * as taskService      from '../services/taskService.js';
+import * as costService      from '../services/costService.js';
+import * as revenueService   from '../services/revenueService.js';
+import * as warehouseService from '../services/warehouseService.js';
 
 const OverviewPage = () => {
-  const { lang, tasks, costs, revenue, items } = useAppContext();
+  const { lang } = useAppContext();
   const navigate = useNavigate();
   const t = I18N[lang];
+  const queryClient = useQueryClient();
 
-  const tasksDone = tasks.filter(x => x.status === "done").length;
+  // Reuse the same queryKeys as individual pages — data comes from cache when already fetched
+  const { data: tasks   = [], isLoading: l1, isFetching } = useQuery({ queryKey: ['tasks'],     queryFn: taskService.getAll,      staleTime: 10 * 60 * 1000, onError: err => toast.error('Błąd', { description: err.message }) });
+  const { data: costs   = [], isLoading: l2 } = useQuery({ queryKey: ['costs'],     queryFn: costService.getAll,      staleTime: Infinity });
+  const { data: revenue = [], isLoading: l3 } = useQuery({ queryKey: ['revenue'],   queryFn: revenueService.getAll,   staleTime: Infinity });
+  const { data: items   = [], isLoading: l4 } = useQuery({ queryKey: ['warehouse'], queryFn: warehouseService.getAll, staleTime: Infinity });
+
+  const refresh = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+    queryClient.invalidateQueries({ queryKey: ['costs'] }),
+    queryClient.invalidateQueries({ queryKey: ['revenue'] }),
+    queryClient.invalidateQueries({ queryKey: ['warehouse'] }),
+  ]);
+
+  const locations = useMemo(
+    () => [...new Set(items.map(it => it.location).filter(Boolean))],
+    [items]
+  );
+
+  const tasksDone  = tasks.filter(x => x.status === "done").length;
   const tasksTotal = tasks.filter(x => x.status !== "cancelled").length;
-  const totalCosts = costs.reduce((s, c) => s + c.amount, 0);
+  const totalCosts   = costs.reduce((s, c) => s + c.amount, 0);
   const totalRevenue = revenue.reduce((s, r) => s + r.amount, 0);
   const balance = totalRevenue - totalCosts;
 
   const upcoming = useMemo(() => tasks
-    .filter(x => x.date && x.status !==    "done" && x.status !== "cancelled")
+    .filter(x => x.date && x.status !== "done" && x.status !== "cancelled")
     .filter(x => x.date >= isoDate(TODAY))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 6),
@@ -30,11 +55,19 @@ const OverviewPage = () => {
     return m;
   }, [tasks]);
 
+  if (l1 || l2 || l3 || l4) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   const kpis = [
     {
       label: t.tasksDone,
       value: <>{tasksDone}<span className="text-muted-foreground text-base font-normal"> / {tasksTotal}</span></>,
-      delta: `${Math.round((tasksDone / tasksTotal) * 100)}%`,
+      delta: `${tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0}%`,
       accent: true,
     },
     { label: t.inProgress, value: statusBreakdown["in-progress"] },
@@ -53,7 +86,12 @@ const OverviewPage = () => {
   ];
 
   return (
-    <>
+    <div className="relative">
+      {isFetching && !(l1 || l2 || l3 || l4) && (
+        <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-[1px] flex items-center justify-center rounded-lg">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-3.5 mb-5">
         {kpis.map((k, i) => (
@@ -78,13 +116,22 @@ const OverviewPage = () => {
           <p className="text-[13px] font-semibold tracking-tight">
             {lang === "pl" ? "Postęp przygotowań" : "Preparation progress"}
           </p>
-          <p className="text-[11px] text-muted-foreground font-mono">{tasks.length} {lang === "pl" ? "zadań" : "tasks"}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-[11px] text-muted-foreground font-mono">{tasks.length} {lang === "pl" ? "zadań" : "tasks"}</p>
+            <button
+              onClick={refresh}
+              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <RefreshCw className="h-3 w-3" />
+              {lang === "pl" ? "Odśwież" : "Refresh"}
+            </button>
+          </div>
         </div>
         <div className="flex h-2.5 rounded-full overflow-hidden bg-secondary">
-          <div style={{ width: `${(statusBreakdown.done / tasks.length) * 100}%` }} className="bg-status-done" />
-          <div style={{ width: `${(statusBreakdown["in-progress"] / tasks.length) * 100}%` }} className="bg-status-progress" />
-          <div style={{ width: `${(statusBreakdown.todo / tasks.length) * 100}%` }} className="bg-status-todo" />
-          <div style={{ width: `${(statusBreakdown.cancelled / tasks.length) * 100}%` }} className="bg-status-cancelled" />
+          <div style={{ width: `${tasks.length ? (statusBreakdown.done / tasks.length) * 100 : 0}%` }} className="bg-status-done" />
+          <div style={{ width: `${tasks.length ? (statusBreakdown["in-progress"] / tasks.length) * 100 : 0}%` }} className="bg-status-progress" />
+          <div style={{ width: `${tasks.length ? (statusBreakdown.todo / tasks.length) * 100 : 0}%` }} className="bg-status-todo" />
+          <div style={{ width: `${tasks.length ? (statusBreakdown.cancelled / tasks.length) * 100 : 0}%` }} className="bg-status-cancelled" />
         </div>
       </div>
 
@@ -124,7 +171,7 @@ const OverviewPage = () => {
             </p>
             <p className="text-[11px] text-muted-foreground font-mono">{items.length} {lang === "pl" ? "pozycji" : "items"}</p>
           </div>
-          {LOCATIONS.map(loc => {
+          {locations.map(loc => {
             const c = items.filter(it => it.location === loc).length;
             const pct = (c / items.length) * 100;
             return (
@@ -141,7 +188,7 @@ const OverviewPage = () => {
           })}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

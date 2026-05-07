@@ -87,6 +87,124 @@ public interface IRepository<T> where T : BaseEntity
 - Use `AsSplitQuery()` for queries with multiple collection includes
 - Prefer async methods (`ToListAsync`, `FirstOrDefaultAsync`) exclusively
 
+## Design Patterns & Architectural Patterns
+
+Apply patterns when they solve a real problem — not as ceremony. For each feature, consider which patterns genuinely reduce complexity or improve extensibility.
+
+### Creational Patterns
+
+**Factory Method** — use when object creation logic is complex or varies by type:
+```csharp
+public static class TaskCommentFactory
+{
+    public static TaskComment Create(Guid taskId, Guid authorId, string content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) throw new DomainException("Comment cannot be empty.");
+        return new TaskComment { TaskItemId = taskId, AuthorId = authorId, Content = content, CreatedAt = DateTime.UtcNow };
+    }
+}
+```
+
+**Builder** — use for constructing complex aggregates with optional parts (e.g., search filter objects, report configurations).
+
+### Structural Patterns
+
+**Decorator** — use for cross-cutting concerns (caching, logging, authorization) without modifying core logic:
+```csharp
+public class CachedTaskRepository : ITaskRepository
+{
+    private readonly ITaskRepository _inner;
+    private readonly IMemoryCache _cache;
+    // delegates to _inner, adds cache layer
+}
+```
+
+**Specification** — use for composable, reusable query predicates:
+```csharp
+public class ActiveTasksSpecification : Specification<TaskItem>
+{
+    public ActiveTasksSpecification() => Criteria = t => t.Status != "done";
+}
+// usage: repo.ListAsync(new ActiveTasksSpecification().And(new TaskByCategorySpec("build")))
+```
+
+### Behavioral Patterns
+
+**Strategy** — use when business rules vary by context (e.g., different notification strategies, export formats):
+```csharp
+public interface INotificationStrategy { Task NotifyAsync(TaskItem task); }
+public class EmailNotification : INotificationStrategy { ... }
+public class SlackNotification : INotificationStrategy { ... }
+// registered by name in DI, selected at runtime
+```
+
+**Observer / Domain Events** — use to decouple side effects from core business logic:
+```csharp
+public class TaskStatusChangedEvent : IDomainEvent
+{
+    public Guid TaskId { get; }
+    public string OldStatus { get; }
+    public string NewStatus { get; }
+}
+// handler: sends notification, updates audit log, recalculates overview
+```
+
+**Pipeline / Chain of Responsibility** — use MediatR behaviors for cross-cutting pipeline steps:
+```csharp
+public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+{
+    // runs FluentValidation before every command handler
+}
+public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+{
+    // logs command execution time
+}
+```
+
+### Architectural Patterns
+
+**CQRS** — separate read models from write models when they have different complexity or scaling needs:
+- Commands: mutate state, go through validation + domain logic
+- Queries: read-optimized, can bypass domain layer and query DB directly via projections
+- Use MediatR `IRequest<T>` for commands/queries, handlers in Application layer
+
+**Repository + Unit of Work** — abstract persistence, enable transactional consistency:
+```csharp
+public interface IUnitOfWork
+{
+    ITaskRepository Tasks { get; }
+    ITaskCommentRepository Comments { get; }
+    Task<int> SaveChangesAsync(CancellationToken ct = default);
+}
+```
+
+**Outbox Pattern** — for reliable domain event publishing (if integration with external systems is added): persist events in the same DB transaction as the aggregate, process them asynchronously.
+
+**Result Pattern** — avoid exception-driven flow for expected business failures:
+```csharp
+public record Result<T>(T? Value, string? Error, bool IsSuccess)
+{
+    public static Result<T> Ok(T value) => new(value, null, true);
+    public static Result<T> Fail(string error) => new(default, error, false);
+}
+```
+
+### When to apply — decision guide
+
+| Situation | Pattern to consider |
+|-----------|-------------------|
+| Object creation has business rules | Factory Method |
+| Same logic with different cross-cutting wrapping | Decorator |
+| Query conditions composed at runtime | Specification |
+| Business rule varies by context/config | Strategy |
+| Side effects should not couple to core logic | Domain Events |
+| Commands need validation/logging/auth | MediatR Pipeline Behavior |
+| Read and write complexity diverges | CQRS |
+| Multiple repos need atomic commit | Unit of Work |
+| Expected failures (not exceptions) | Result Pattern |
+
+**Pragmatic rule**: if applying a pattern adds more lines than it removes complexity, skip it. A flat controller with direct EF Core is better than a wrong abstraction.
+
 ## API Design Standards
 
 ### Controller Pattern

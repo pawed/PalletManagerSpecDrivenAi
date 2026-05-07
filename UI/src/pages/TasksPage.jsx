@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Loader2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { I18N } from '../data/i18n';
 import { PEOPLE, TASK_CATEGORIES } from '../data/tasks';
 import { StatusPill } from '../components/Layout';
@@ -8,32 +10,66 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { MultiSelect } from '../components/ui/multi-select';
 import Harmonogram from '../components/Harmonogram';
 import { useAppContext } from '../context/AppContext';
+import * as taskService from '../services/taskService.js';
+import * as userService from '../services/userService.js';
+
+const TASKS_STALE = 10 * 60 * 1000; // 10 min
 
 const TasksPage = () => {
-  const {
-    lang, tasks, setTasks,
-    filterPersons,    setFilterPersons,
-    filterCategories, setFilterCategories,
-    filterStatuses,   setFilterStatuses,
-    tasksQuery: query, setTasksQuery: setQuery,
-  } = useAppContext();
-
+  const { lang } = useAppContext();
   const t = I18N[lang];
+  const queryClient = useQueryClient();
 
-  const personOptions = PEOPLE.map(p => ({ value: p, label: p }));
+  const [filterPersons,    setFilterPersons]    = useState([]);
+  const [filterCategories, setFilterCategories] = useState([]);
+  const [filterStatuses,   setFilterStatuses]   = useState([]);
+  const [query,            setQuery]            = useState("");
+
+  const { data: tasks = [], isLoading: loadingTasks, isFetching } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: taskService.getAll,
+    staleTime: TASKS_STALE,
+    onError: err => toast.error('Błąd ładowania zadań', { description: err.message }),
+  });
+
+  const { data: people = PEOPLE } = useQuery({
+    queryKey: ['people'],
+    queryFn: () => userService.getPeopleNames().catch(() => PEOPLE),
+    staleTime: Infinity,
+  });
+
+  const mutation = useMutation({
+    mutationFn: ({ id, status }) => taskService.updateStatus(id, status),
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+      const prev = queryClient.getQueryData(['tasks']);
+      queryClient.setQueryData(['tasks'], old =>
+        old.map(t => t.id === id ? { ...t, status } : t)
+      );
+      return { prev };
+    },
+    onError: (err, _, ctx) => {
+      queryClient.setQueryData(['tasks'], ctx.prev);
+      toast.error('Nie udało się zmienić statusu', { description: err.message });
+    },
+  });
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['tasks'] });
+
+  const personOptions = people.map(p => ({ value: p, label: p }));
   const statusOptions = [
-    { value: "todo",        label: t.todo        },
-    { value: "in-progress", label: t.inProgress  },
-    { value: "done",        label: t.done        },
-    { value: "cancelled",   label: t.cancelled   },
+    { value: "todo",        label: t.todo       },
+    { value: "in-progress", label: t.inProgress },
+    { value: "done",        label: t.done       },
+    { value: "cancelled",   label: t.cancelled  },
   ];
 
   const filtered = useMemo(() => tasks.filter(task => {
-    if (filterPersons.length   > 0 && !task.who.some(w => filterPersons.includes(w))) return false;
-    if (filterCategories.length > 0 && !filterCategories.includes(task.category))     return false;
-    if (filterStatuses.length  > 0 && !filterStatuses.includes(task.status))          return false;
+    if (filterPersons.length    > 0 && !task.who.some(w => filterPersons.includes(w))) return false;
+    if (filterCategories.length > 0 && !filterCategories.includes(task.category))      return false;
+    if (filterStatuses.length   > 0 && !filterStatuses.includes(task.status))          return false;
     if (query && !task.task.toLowerCase().includes(query.toLowerCase()) &&
-        !(task.note || "").toLowerCase().includes(query.toLowerCase()))                return false;
+        !(task.note || "").toLowerCase().includes(query.toLowerCase()))                 return false;
     return true;
   }), [tasks, filterPersons, filterCategories, filterStatuses, query]);
 
@@ -52,12 +88,28 @@ const TasksPage = () => {
     return g;
   }, [filtered]);
 
-  const toggleStatus = (id) =>
-    setTasks(tasks.map(t => t.id === id ? { ...t, status: t.status === "done" ? "todo" : "done" } : t));
+  const toggleStatus = (id) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    mutation.mutate({ id, status: task.status === "done" ? "todo" : "done" });
+  };
+
+  if (loadingTasks) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
+    <div className="relative">
+      {isFetching && !loadingTasks && (
+        <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-[1px] flex items-center justify-center rounded-lg">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
     <Tabs defaultValue="list">
-      {/* Tabs + Filters row */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <TabsList>
           <TabsTrigger value="list">{t.tabList}</TabsTrigger>
@@ -86,9 +138,17 @@ const TasksPage = () => {
           onChange={setFilterStatuses}
           placeholder={t.status}
         />
+
+        <button
+          onClick={refresh}
+          disabled={isFetching}
+          className="ml-auto inline-flex items-center gap-1.5 px-3 h-8 rounded-md border border-border text-[12px] text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
+          {lang === "pl" ? "Odśwież" : "Refresh"}
+        </button>
       </div>
 
-      {/* List view */}
       <TabsContent value="list">
         {Object.entries(grouped).map(([status, items]) => {
           if (items.length === 0) return null;
@@ -130,11 +190,11 @@ const TasksPage = () => {
         })}
       </TabsContent>
 
-      {/* Gantt view */}
       <TabsContent value="gantt">
         <Harmonogram lang={lang} tasks={filtered} />
       </TabsContent>
     </Tabs>
+    </div>
   );
 };
 

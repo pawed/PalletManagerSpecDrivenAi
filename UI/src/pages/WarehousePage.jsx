@@ -1,18 +1,36 @@
 import React, { useState, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Loader2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { I18N } from '../data/i18n';
-import { WH_CATEGORIES, LOCATIONS } from '../data/warehouse';
+import { WH_CATEGORIES } from '../data/warehouse';
 import { Input } from '../components/ui/input';
 import { cn } from '../lib/utils';
 import { useAppContext } from '../context/AppContext';
+import * as warehouseService from '../services/warehouseService.js';
 
 const WarehousePage = () => {
-  const { lang, items } = useAppContext();
+  const { lang } = useAppContext();
   const t = I18N[lang];
+  const queryClient = useQueryClient();
 
   const [filterLocations,  setFilterLocations]  = useState([]);
   const [filterCategories, setFilterCategories] = useState([]);
   const [query,            setQuery]            = useState("");
+
+  const { data: items = [], isLoading, isFetching } = useQuery({
+    queryKey: ['warehouse'],
+    queryFn: warehouseService.getAll,
+    staleTime: Infinity,
+    onError: err => toast.error('Błąd ładowania magazynu', { description: err.message }),
+  });
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['warehouse'] });
+
+  const locations = useMemo(
+    () => [...new Set(items.map(it => it.location).filter(Boolean))],
+    [items]
+  );
 
   const filtered = useMemo(() => items.filter(it => {
     if (filterCategories.length > 0 && !filterCategories.includes(it.category)) return false;
@@ -42,14 +60,27 @@ const WarehousePage = () => {
     </button>
   );
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <>
-      {/* Location chips */}
+    <div className="relative">
+      {isFetching && !isLoading && (
+        <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-[1px] flex items-center justify-center rounded-lg">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      {/* Location chips + Refresh */}
       <div className="flex flex-wrap gap-2 mb-2.5">
         <Chip active={filterLocations.length === 0} onClick={() => setFilterLocations([])}>
           {t.all} <span className="opacity-60">({items.length})</span>
         </Chip>
-        {LOCATIONS.map(loc => {
+        {locations.map(loc => {
           const active = filterLocations.includes(loc);
           return (
             <Chip
@@ -65,6 +96,13 @@ const WarehousePage = () => {
             </Chip>
           );
         })}
+        <button
+          onClick={refresh}
+          className="ml-auto inline-flex items-center gap-1.5 px-3 h-7 rounded-full border border-border text-[11.5px] text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+        >
+          <RefreshCw className="h-3 w-3" />
+          {lang === "pl" ? "Odśwież" : "Refresh"}
+        </button>
       </div>
 
       {/* Search + count */}
@@ -134,7 +172,7 @@ const WarehousePage = () => {
           })
         )}
       </div>
-    </>
+    </div>
   );
 };
 
