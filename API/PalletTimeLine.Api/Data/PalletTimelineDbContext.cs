@@ -106,6 +106,7 @@ public class PalletTimelineDbContext : DbContext
         // Globalne konwertery dla enumów żeby w bazie były przechowywane jako stringi, co ułatwia czytelność i debugowanie
         configurationBuilder.Properties<EditionStatus>().HaveConversion<string>();
         configurationBuilder.Properties<TaskItemStatus>().HaveConversion<string>();
+        configurationBuilder.Properties<TaskItemPriority>().HaveConversion<string>();
         configurationBuilder.Properties<WarehouseCategory>().HaveConversion<string>();
         configurationBuilder.Properties<CostCategory>().HaveConversion<string>();
         configurationBuilder.Properties<RevenueCategory>().HaveConversion<string>();
@@ -135,26 +136,26 @@ internal static class SeedData
 
     internal static readonly TaskItem[] Tasks =
     {
-        new TaskItem { Id = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), EditionId = Ed2025Id, Title = "Do połowy czerwca ogarnięcie gruzu",  Date = "2025-06-15", Status = "done", Category = "site" },
-        new TaskItem { Id = new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), EditionId = Ed2025Id, Title = "Ogrodzenie i znaki zakazu wokół gruzu",  Date = "2025-07-25", Status = "in-progress", Category = "site" },
-        new TaskItem { Id = new Guid("cccccccc-cccc-cccc-cccc-cccccccccccc"), EditionId = Ed2025Id, Title = "Loteria fantowa — sprawdzić legalność", Date = null, Status = "in-progress", Description = "podpytać czy to jest legalne", Category = "admin" },
-        new TaskItem { Id = new Guid("dddddddd-dddd-dddd-dddd-dddddddddddd"), EditionId = Ed2025Id, Title = "Zapytać Matczyn o wynajem nalewaka",  Date = null, Status = "todo", Category = "supplies" },
-        new TaskItem { Id = new Guid("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"), EditionId = Ed2025Id, Title = "Dogadać 300 europalet",  Date = "2025-08-01", Status = "done", Description = "odbiór 01.08, oddajemy 11–13.08", Category = "build" },
-        new TaskItem { Id = new Guid("ffffffff-ffff-ffff-ffff-ffffffffffff"), EditionId = Ed2025Id, Title = "Wyrównanie terenu — Anasiewicz",  Date = null, Status = "done", Description = "Mateusz Prakowski wyrówna teren", Category = "site" },
-        new TaskItem { Id = new Guid("11111111-1111-1111-1111-111111111112"), EditionId = Ed2025Id, Title = "Paliwo z Admarem",  Date = null, Status = "done", Category = "supplies" },
-        new TaskItem { Id = new Guid("22222222-2222-2222-2222-222222222223"), EditionId = Ed2025Id, Title = "Słupki od Gonza",  Date = null, Status = "done", Category = "build" },
-        new TaskItem { Id = new Guid("33333333-3333-3333-3333-333333333334"), EditionId = Ed2025Id, Title = "Ogrodzenie metalowe do backstage", Date = null, Status = "done", Category = "build" },
-        new TaskItem { Id = new Guid("44444444-4444-4444-4444-444444444445"), EditionId = Ed2025Id, Title = "Słupki oświetleniowe", Date = "2025-08-01", Status = "done", Description = "ustawianie 3 sierpnia", Category = "build" },
-        new TaskItem { Id = new Guid("55555555-5555-5555-5555-555555555556"), EditionId = Ed2025Id, Title = "Sprawdzić kasę z poprzedniej edycji",  Date = null, Status = "done", Description = "ok. 700 zł", Category = "finance" },
-        new TaskItem { Id = new Guid("66666666-6666-6666-6666-666666666667"), EditionId = Ed2025Id, Title = "Promocja zbiórki",  Status = "done", Category = "promo" },
-        new TaskItem { Id = new Guid("77777777-7777-7777-7777-777777777778"), EditionId = Ed2025Id, Title = "Posty na stronie",  Date = "2025-07-12", Status = "in-progress", Category = "promo" },
-        new TaskItem { Id = new Guid("88888888-8888-8888-8888-888888888889"), EditionId = Ed2025Id, Title = "Wycena koszulek",  Date = null, Status = "done", Category = "merch" },
-        new TaskItem { Id = new Guid("99999999-9999-9999-9999-999999999990"), EditionId = Ed2025Id, Title = "Wlepki",  Date = null, Status = "done", Category = "merch" },
-        new TaskItem { Id = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"), EditionId = Ed2025Id, Title = "Naprawa namiotu",  Date = "2025-06-30", Status = "done", Category = "build" },
-        new TaskItem { Id = new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2"), EditionId = Ed2025Id, Title = "Zwożenie palet",  Date = "2025-07-26", Status = "todo", Description = "do 2 sierpnia", Category = "build" },
-        new TaskItem { Id = new Guid("cccccccc-cccc-cccc-cccc-ccccccccccc3"), EditionId = Ed2025Id, Title = "Początek budowy",  Date = "2025-08-04", Status = "todo", Category = "build" },
-        new TaskItem { Id = new Guid("dddddddd-dddd-dddd-dddd-ddddddddddd4"), EditionId = Ed2025Id, Title = "Scena ma stać",  Date = "2025-08-07", Status = "todo", Category = "build" },
-        new TaskItem { Id = new Guid("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee5"), EditionId = Ed2025Id, Title = "Prysznic, woda",  Date = "2025-08-05", Status = "todo", Category = "build" },
+        new TaskItem { Id = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), EditionId = Ed2025Id, Title = "Do połowy czerwca ogarnięcie gruzu",  Date = "2025-06-15", Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Category = "site" },
+        new TaskItem { Id = new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), EditionId = Ed2025Id, Title = "Ogrodzenie i znaki zakazu wokół gruzu",  Date = "2025-07-25", Status = TaskItemStatus.InProgress, Priority = TaskItemPriority.Ordinary, Category = "site" },
+        new TaskItem { Id = new Guid("cccccccc-cccc-cccc-cccc-cccccccccccc"), EditionId = Ed2025Id, Title = "Loteria fantowa — sprawdzić legalność", Date = null, Status = TaskItemStatus.InProgress, Priority = TaskItemPriority.Ordinary, Description = "podpytać czy to jest legalne", Category = "admin" },
+        new TaskItem { Id = new Guid("dddddddd-dddd-dddd-dddd-dddddddddddd"), EditionId = Ed2025Id, Title = "Zapytać Matczyn o wynajem nalewaka",  Date = null, Status = TaskItemStatus.NotStarted, Priority = TaskItemPriority.Ordinary, Category = "supplies" },
+        new TaskItem { Id = new Guid("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"), EditionId = Ed2025Id, Title = "Dogadać 300 europalet",  Date = "2025-08-01", Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Description = "odbiór 01.08, oddajemy 11–13.08", Category = "build" },
+        new TaskItem { Id = new Guid("ffffffff-ffff-ffff-ffff-ffffffffffff"), EditionId = Ed2025Id, Title = "Wyrównanie terenu — Anasiewicz",  Date = null, Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Description = "Mateusz Prakowski wyrówna teren", Category = "site" },
+        new TaskItem { Id = new Guid("11111111-1111-1111-1111-111111111112"), EditionId = Ed2025Id, Title = "Paliwo z Admarem",  Date = null, Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Category = "supplies" },
+        new TaskItem { Id = new Guid("22222222-2222-2222-2222-222222222223"), EditionId = Ed2025Id, Title = "Słupki od Gonza",  Date = null, Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Category = "build" },
+        new TaskItem { Id = new Guid("33333333-3333-3333-3333-333333333334"), EditionId = Ed2025Id, Title = "Ogrodzenie metalowe do backstage", Date = null, Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Category = "build" },
+        new TaskItem { Id = new Guid("44444444-4444-4444-4444-444444444445"), EditionId = Ed2025Id, Title = "Słupki oświetleniowe", Date = "2025-08-01", Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Description = "ustawianie 3 sierpnia", Category = "build" },
+        new TaskItem { Id = new Guid("55555555-5555-5555-5555-555555555556"), EditionId = Ed2025Id, Title = "Sprawdzić kasę z poprzedniej edycji",  Date = null, Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Description = "ok. 700 zł", Category = "finance" },
+        new TaskItem { Id = new Guid("66666666-6666-6666-6666-666666666667"), EditionId = Ed2025Id, Title = "Promocja zbiórki",  Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Category = "promo" },
+        new TaskItem { Id = new Guid("77777777-7777-7777-7777-777777777778"), EditionId = Ed2025Id, Title = "Posty na stronie",  Date = "2025-07-12", Status = TaskItemStatus.InProgress, Priority = TaskItemPriority.Ordinary, Category = "promo" },
+        new TaskItem { Id = new Guid("88888888-8888-8888-8888-888888888889"), EditionId = Ed2025Id, Title = "Wycena koszulek",  Date = null, Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Category = "merch" },
+        new TaskItem { Id = new Guid("99999999-9999-9999-9999-999999999990"), EditionId = Ed2025Id, Title = "Wlepki",  Date = null, Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Category = "merch" },
+        new TaskItem { Id = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"), EditionId = Ed2025Id, Title = "Naprawa namiotu",  Date = "2025-06-30", Status = TaskItemStatus.Done, Priority = TaskItemPriority.Ordinary, Category = "build" },
+        new TaskItem { Id = new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2"), EditionId = Ed2025Id, Title = "Zwożenie palet",  Date = "2025-07-26", Status = TaskItemStatus.NotStarted, Priority = TaskItemPriority.Ordinary, Description = "do 2 sierpnia", Category = "build" },
+        new TaskItem { Id = new Guid("cccccccc-cccc-cccc-cccc-ccccccccccc3"), EditionId = Ed2025Id, Title = "Początek budowy",  Date = "2025-08-04", Status = TaskItemStatus.NotStarted, Priority = TaskItemPriority.Ordinary, Category = "build" },
+        new TaskItem { Id = new Guid("dddddddd-dddd-dddd-dddd-ddddddddddd4"), EditionId = Ed2025Id, Title = "Scena ma stać",  Date = "2025-08-07", Status = TaskItemStatus.NotStarted, Priority = TaskItemPriority.Ordinary, Category = "build" },
+        new TaskItem { Id = new Guid("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee5"), EditionId = Ed2025Id, Title = "Prysznic, woda",  Date = "2025-08-05", Status = TaskItemStatus.NotStarted, Priority = TaskItemPriority.Ordinary, Category = "build" },
     };
 
     internal record TaskUserAssignment(Guid TaskItemId, Guid UserId);

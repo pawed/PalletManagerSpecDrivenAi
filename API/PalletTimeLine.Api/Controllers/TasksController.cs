@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PalletTimeLine.Api.Data;
 using PalletTimeLine.Api.DTOs;
+using PalletTimeLine.Api.Models;
 
 namespace PalletTimeLine.Api.Controllers;
 
@@ -26,7 +27,8 @@ public class TasksController : ControllerBase
                 t.Title,
                 t.Responsible.Select(u => u.DisplayName).ToArray(),
                 t.Date,
-                t.Status,
+                t.Status.ToString(),
+                t.Priority.ToString(),
                 t.Category,
                 t.Description))
             .ToListAsync();
@@ -45,7 +47,8 @@ public class TasksController : ControllerBase
                 t.Title,
                 t.Responsible.Select(u => u.DisplayName).ToArray(),
                 t.Date,
-                t.Status,
+                t.Status.ToString(),
+                t.Priority.ToString(),
                 t.Category,
                 t.Description))
             .FirstOrDefaultAsync();
@@ -62,7 +65,10 @@ public class TasksController : ControllerBase
             return NotFound();
         }
 
-        task.Status = request.Status;
+        if (!Enum.TryParse<TaskItemStatus>(request.Status, ignoreCase: true, out var newStatus))
+            return BadRequest($"Invalid status value: {request.Status}");
+
+        task.Status = newStatus;
         await _db.SaveChangesAsync();
 
         return NoContent();

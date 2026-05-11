@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PalletTimeLine.Api.Data;
 using PalletTimeLine.Api.DTOs;
+using PalletTimeLine.Api.Models;
 
 namespace PalletTimeLine.Api.Controllers;
 
@@ -24,9 +25,9 @@ public class OverviewController : ControllerBase
         var revenue = await _db.Revenues.AsNoTracking().ToListAsync();
         var warehouse = await _db.WarehouseItems.AsNoTracking().CountAsync();
 
-        var tasksDone = tasks.Count(t => t.Status == "done");
-        var tasksTotal = tasks.Count(t => t.Status != "cancelled");
-        var inProgress = tasks.Count(t => t.Status == "in-progress");
+        var tasksDone = tasks.Count(t => t.Status == TaskItemStatus.Done);
+        var tasksTotal = tasks.Count(t => t.Status != TaskItemStatus.Deleted);
+        var inProgress = tasks.Count(t => t.Status == TaskItemStatus.InProgress);
         var totalCosts = costs.Sum(c => c.Amount);
         var totalRevenue = revenue.Sum(r => r.Amount);
         var balance = totalRevenue - totalCosts;

@@ -838,7 +838,7 @@
             "type": "string",
             "format": "uuid"
           },
-          "task": {
+          "title": {
             "type": "string",
             "nullable": true
           },
@@ -857,11 +857,15 @@
             "type": "string",
             "nullable": true
           },
+          "priority": {
+            "type": "string",
+            "nullable": true
+          },
           "category": {
             "type": "string",
             "nullable": true
           },
-          "note": {
+          "description": {
             "type": "string",
             "nullable": true
           }

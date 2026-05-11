@@ -2,12 +2,13 @@ namespace PalletTimeLine.Api.DTOs;
 
 public record TaskDto(
     Guid Id,
-    string Task,  
+    string Title,
     string[] Who,
     string? Date,
     string Status,
+    string Priority,
     string Category,
-    string? Note);
+    string? Description);
 
 public record UserDto(
     Guid Id,
