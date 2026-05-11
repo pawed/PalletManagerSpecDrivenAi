@@ -4,7 +4,7 @@ public record TaskDto(
     Guid Id,
     string Title,
     string[] Who,
-    string? Date,
+    string? CompleteDate,
     string Status,
     string Priority,
     string Category,
@@ -65,6 +65,24 @@ public record OverviewDto(
     int WarehouseItems);
 
 public record TaskStatusUpdateDto(string Status);
+
+public record TaskCreateDto(
+    string Title,
+    string? Description,
+    string? CompleteDate,
+    string Status,
+    string Priority,
+    string Category,
+    string[] Who);
+
+public record TaskUpdateDto(
+    string Title,
+    string? Description,
+    string? CompleteDate,
+    string Status,
+    string Priority,
+    string Category,
+    string[] Who);
 
 public record LookupDto(Guid Id, string Label);
 

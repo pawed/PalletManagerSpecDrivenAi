@@ -31,6 +31,7 @@ function App() {
   const [dark, setDark] = useState(false);
 
   const [tasks, setTasks] = useState(FESTIVAL_DATA.TASKS);
+  const [showAddTask, setShowAddTask] = useState(false);
   const [costs] = useState(FESTIVAL_DATA.COSTS);
   const [revenue] = useState(FESTIVAL_DATA.REVENUE);
   const [items] = useState(FESTIVAL_DATA.WAREHOUSE);
@@ -69,7 +70,9 @@ function App() {
           lang={lang} setLang={setLang}
           dark={dark} setDark={setDark}
           onPrint={() => window.print()}
-          onAdd={active !== "overview" ? () => alert(lang === "pl" ? "Dodawanie nowej pozycji (mockup)" : "Add new entry (mockup)") : null} />
+          onAdd={active === "tasks"
+            ? () => setShowAddTask(true)
+            : (active !== "overview" ? () => alert(lang === "pl" ? "Dodawanie nowej pozycji (mockup)" : "Add new entry (mockup)") : null)} />
         <div className="content">
           {active === "overview" && (
             <OverviewSection lang={lang} tasks={tasks} costs={costs} revenue={revenue} items={items} onNav={setActive} />
@@ -80,7 +83,8 @@ function App() {
               tasks={tasks} setTasks={setTasks}
               filterPersons={filterPersons} setFilterPersons={setFilterPersons}
               filterCategories={filterCategories} setFilterCategories={setFilterCategories}
-              query={tasksQuery} setQuery={setTasksQuery} />
+              query={tasksQuery} setQuery={setTasksQuery}
+              showAddTask={showAddTask} setShowAddTask={setShowAddTask} />
           )}
           {active === "costs" && (
             <CostsSection lang={lang} costs={costs} revenue={revenue} />

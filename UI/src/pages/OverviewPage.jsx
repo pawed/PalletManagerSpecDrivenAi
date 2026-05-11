@@ -36,21 +36,21 @@ const OverviewPage = () => {
     [items]
   );
 
-  const tasksDone  = tasks.filter(x => x.status === "done").length;
-  const tasksTotal = tasks.filter(x => x.status !== "cancelled").length;
+  const tasksDone  = tasks.filter(x => x.status === "Done").length;
+  const tasksTotal = tasks.filter(x => x.status !== "Deleted").length;
   const totalCosts   = costs.reduce((s, c) => s + c.amount, 0);
   const totalRevenue = revenue.reduce((s, r) => s + r.amount, 0);
   const balance = totalRevenue - totalCosts;
 
   const upcoming = useMemo(() => tasks
-    .filter(x => x.date && x.status !== "done" && x.status !== "cancelled")
-    .filter(x => x.date >= isoDate(TODAY))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .filter(x => x.completeDate && x.status !== "Done" && x.status !== "Deleted")
+    .filter(x => x.completeDate >= isoDate(TODAY))
+    .sort((a, b) => a.completeDate.localeCompare(b.completeDate))
     .slice(0, 6),
     [tasks]);
 
   const statusBreakdown = useMemo(() => {
-    const m = { todo: 0, "in-progress": 0, done: 0, cancelled: 0 };
+    const m = { NotStarted: 0, InProgress: 0, Done: 0, Blocked: 0, Deleted: 0 };
     tasks.forEach(x => m[x.status]++);
     return m;
   }, [tasks]);
@@ -70,7 +70,7 @@ const OverviewPage = () => {
       delta: `${tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0}%`,
       accent: true,
     },
-    { label: t.inProgress, value: statusBreakdown["in-progress"] },
+    { label: t.inProgress, value: statusBreakdown.InProgress },
     {
       label: t.revenue,
       value: fmtPLN(totalRevenue).replace(" zł", ""),
@@ -128,10 +128,10 @@ const OverviewPage = () => {
           </div>
         </div>
         <div className="flex h-2.5 rounded-full overflow-hidden bg-secondary">
-          <div style={{ width: `${tasks.length ? (statusBreakdown.done / tasks.length) * 100 : 0}%` }} className="bg-status-done" />
-          <div style={{ width: `${tasks.length ? (statusBreakdown["in-progress"] / tasks.length) * 100 : 0}%` }} className="bg-status-progress" />
-          <div style={{ width: `${tasks.length ? (statusBreakdown.todo / tasks.length) * 100 : 0}%` }} className="bg-status-todo" />
-          <div style={{ width: `${tasks.length ? (statusBreakdown.cancelled / tasks.length) * 100 : 0}%` }} className="bg-status-cancelled" />
+          <div style={{ width: `${tasks.length ? (statusBreakdown.Done / tasks.length) * 100 : 0}%` }} className="bg-status-done" />
+          <div style={{ width: `${tasks.length ? (statusBreakdown.InProgress / tasks.length) * 100 : 0}%` }} className="bg-status-progress" />
+          <div style={{ width: `${tasks.length ? (statusBreakdown.NotStarted / tasks.length) * 100 : 0}%` }} className="bg-status-todo" />
+          <div style={{ width: `${tasks.length ? ((statusBreakdown.Blocked + statusBreakdown.Deleted) / tasks.length) * 100 : 0}%` }} className="bg-status-cancelled" />
         </div>
       </div>
 
@@ -155,7 +155,7 @@ const OverviewPage = () => {
                 style={{ gridTemplateColumns: "60px 1fr auto" }}
                 onClick={() => navigate("/tasks")}
               >
-                <span className="font-mono text-[11px] text-muted-foreground">{task.date}</span>
+                <span className="font-mono text-[11px] text-muted-foreground">{task.completeDate}</span>
                 <span className="text-[12.5px]">{task.task}</span>
                 <Avatars people={task.who} />
               </div>

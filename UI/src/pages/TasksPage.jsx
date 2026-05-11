@@ -58,10 +58,11 @@ const TasksPage = () => {
 
   const personOptions = people.map(p => ({ value: p, label: p }));
   const statusOptions = [
-    { value: "todo",        label: t.todo       },
-    { value: "in-progress", label: t.inProgress },
-    { value: "done",        label: t.done       },
-    { value: "cancelled",   label: t.cancelled  },
+    { value: "NotStarted", label: t.notStarted },
+    { value: "InProgress", label: t.inProgress },
+    { value: "Done",       label: t.done       },
+    { value: "Blocked",    label: t.blocked    },
+    { value: "Deleted",    label: t.deleted    },
   ];
 
   const filtered = useMemo(() => tasks.filter(task => {
@@ -74,15 +75,15 @@ const TasksPage = () => {
   }), [tasks, filterPersons, filterCategories, filterStatuses, query]);
 
   const grouped = useMemo(() => {
-    const order = ["in-progress", "todo", "done", "cancelled"];
+    const order = ["InProgress", "NotStarted", "Done", "Blocked", "Deleted"];
     const g = {};
     order.forEach(s => (g[s] = []));
     filtered.forEach(task => g[task.status].push(task));
     Object.values(g).forEach(arr =>
       arr.sort((a, b) => {
-        if (!a.date) return 1;
-        if (!b.date) return -1;
-        return a.date.localeCompare(b.date);
+        if (!a.completeDate) return 1;
+        if (!b.completeDate) return -1;
+        return a.completeDate.localeCompare(b.completeDate);
       })
     );
     return g;
@@ -91,7 +92,7 @@ const TasksPage = () => {
   const toggleStatus = (id) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    mutation.mutate({ id, status: task.status === "done" ? "todo" : "done" });
+    mutation.mutate({ id, status: task.status === "Done" ? "NotStarted" : "Done" });
   };
 
   if (loadingTasks) {
@@ -168,20 +169,20 @@ const TasksPage = () => {
                   >
                     <input
                       type="checkbox"
-                      checked={task.status === "done"}
+                      checked={task.status === "Done"}
                       onChange={() => toggleStatus(task.id)}
                       className="w-[18px] h-[18px] accent-foreground"
                     />
                     <div
                       className="text-[13px] font-medium tracking-tight"
-                      style={task.status === "done" ? { textDecoration: "line-through", color: "var(--muted-foreground)" } : {}}
+                      style={task.status === "Done" ? { textDecoration: "line-through", color: "var(--muted-foreground)" } : {}}
                     >
                       {task.task}
                       {task.note && (
                         <p className="text-[11.5px] text-muted-foreground mt-0.5 font-normal">{task.note}</p>
                       )}
                     </div>
-                    <span className="font-mono text-[11.5px] text-muted-foreground">{task.date || "—"}</span>
+                    <span className="font-mono text-[11.5px] text-muted-foreground">{task.completeDate || "—"}</span>
                   </div>
                 ))}
               </div>

@@ -4,6 +4,7 @@ const BASE_URL = '/api';
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, options);
   if (!res.ok) throw new Error(`API error ${res.status}: ${path}`);
+  if (res.status === 204 || res.headers.get('content-length') === '0') return null;
   return res.json();
 }
 

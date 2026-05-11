@@ -6,7 +6,7 @@ public class TaskItem
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public ICollection<User> Responsible { get; set; } = new List<User>();
-    public string? Date { get; set; }
+    public DateTime? CompleteDate { get; set; }
     public TaskItemStatus Status { get; set; } = TaskItemStatus.NotStarted;
     public TaskItemPriority Priority { get; set; } = TaskItemPriority.Ordinary;
     public string Category { get; set; } = string.Empty; 

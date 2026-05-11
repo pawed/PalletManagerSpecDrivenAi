@@ -13,7 +13,7 @@ import './styles/index.css';
 
 
 function App() {
-  const { lang, setLang, dark, setDark } = useAppContext();
+  const { lang, setLang, dark, setDark, setShowAddTask } = useAppContext();
   const location = useLocation();
   const t = I18N[lang];
 
@@ -43,8 +43,8 @@ function App() {
           dark={dark}
           setDark={setDark}
           onPrint={() => window.print()}
-          onAdd={!isOverview
-            ? () => alert(lang === "pl" ? "Dodawanie nowej pozycji (mockup)" : "Add new entry (mockup)")
+          onAdd={location.pathname === "/tasks"
+            ? () => setShowAddTask(true)
             : null}
         />
         <div className="p-7 pb-16 flex-1 min-w-0 overflow-y-auto">

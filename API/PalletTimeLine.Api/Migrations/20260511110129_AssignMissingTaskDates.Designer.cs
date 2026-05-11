@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PalletTimeLine.Api.Data;
@@ -11,9 +12,11 @@ using PalletTimeLine.Api.Data;
 namespace PalletTimeLine.Api.Migrations
 {
     [DbContext(typeof(PalletTimelineDbContext))]
-    partial class PalletTimelineDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260511110129_AssignMissingTaskDates")]
+    partial class AssignMissingTaskDates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -308,18 +311,21 @@ namespace PalletTimeLine.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("CompleteDate")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
                     b.Property<Guid>("EditionId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Priority")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -340,9 +346,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
                             Category = "site",
-                            CompleteDate = new DateTime(2025, 6, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 6, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 6, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Do połowy czerwca ogarnięcie gruzu"
                         },
@@ -350,9 +357,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
                             Category = "site",
-                            CompleteDate = new DateTime(2025, 7, 25, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 7, 25, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 7, 25, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "InProgress",
                             Title = "Ogrodzenie i znaki zakazu wokół gruzu"
                         },
@@ -360,10 +368,11 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("cccccccc-cccc-cccc-cccc-cccccccccccc"),
                             Category = "admin",
-                            CompleteDate = new DateTime(2025, 6, 10, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "podpytać czy to jest legalne",
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 6, 10, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 6, 10, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "InProgress",
                             Title = "Loteria fantowa — sprawdzić legalność"
                         },
@@ -371,9 +380,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("dddddddd-dddd-dddd-dddd-dddddddddddd"),
                             Category = "supplies",
-                            CompleteDate = new DateTime(2025, 6, 20, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 6, 20, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 6, 20, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "NotStarted",
                             Title = "Zapytać Matczyn o wynajem nalewaka"
                         },
@@ -381,10 +391,11 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
                             Category = "build",
-                            CompleteDate = new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "odbiór 01.08, oddajemy 11–13.08",
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Dogadać 300 europalet"
                         },
@@ -392,10 +403,11 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("ffffffff-ffff-ffff-ffff-ffffffffffff"),
                             Category = "site",
-                            CompleteDate = new DateTime(2025, 7, 18, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Mateusz Prakowski wyrówna teren",
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 7, 18, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 7, 18, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Wyrównanie terenu — Anasiewicz"
                         },
@@ -403,9 +415,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111112"),
                             Category = "supplies",
-                            CompleteDate = new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Paliwo z Admarem"
                         },
@@ -413,9 +426,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("22222222-2222-2222-2222-222222222223"),
                             Category = "build",
-                            CompleteDate = new DateTime(2025, 7, 20, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 7, 20, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 7, 20, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Słupki od Gonza"
                         },
@@ -423,9 +437,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("33333333-3333-3333-3333-333333333334"),
                             Category = "build",
-                            CompleteDate = new DateTime(2025, 7, 22, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 7, 22, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 7, 22, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Ogrodzenie metalowe do backstage"
                         },
@@ -433,10 +448,11 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444445"),
                             Category = "build",
-                            CompleteDate = new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "ustawianie 3 sierpnia",
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Słupki oświetleniowe"
                         },
@@ -444,10 +460,11 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("55555555-5555-5555-5555-555555555556"),
                             Category = "finance",
-                            CompleteDate = new DateTime(2025, 6, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "ok. 700 zł",
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 6, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 6, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Sprawdzić kasę z poprzedniej edycji"
                         },
@@ -455,9 +472,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666667"),
                             Category = "promo",
-                            CompleteDate = new DateTime(2025, 6, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 6, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 6, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Promocja zbiórki"
                         },
@@ -465,9 +483,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777778"),
                             Category = "promo",
-                            CompleteDate = new DateTime(2025, 7, 12, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 7, 12, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 7, 12, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "InProgress",
                             Title = "Posty na stronie"
                         },
@@ -475,9 +494,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("88888888-8888-8888-8888-888888888889"),
                             Category = "merch",
-                            CompleteDate = new DateTime(2025, 6, 25, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 6, 25, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 6, 25, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Wycena koszulek"
                         },
@@ -485,9 +505,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("99999999-9999-9999-9999-999999999990"),
                             Category = "merch",
-                            CompleteDate = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Wlepki"
                         },
@@ -495,9 +516,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
                             Category = "build",
-                            CompleteDate = new DateTime(2025, 6, 30, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 6, 30, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 6, 30, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "Done",
                             Title = "Naprawa namiotu"
                         },
@@ -505,10 +527,11 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2"),
                             Category = "build",
-                            CompleteDate = new DateTime(2025, 7, 26, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "do 2 sierpnia",
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 7, 26, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 7, 26, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "NotStarted",
                             Title = "Zwożenie palet"
                         },
@@ -516,9 +539,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("cccccccc-cccc-cccc-cccc-ccccccccccc3"),
                             Category = "build",
-                            CompleteDate = new DateTime(2025, 8, 4, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 8, 4, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 8, 4, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "NotStarted",
                             Title = "Początek budowy"
                         },
@@ -526,9 +550,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("dddddddd-dddd-dddd-dddd-ddddddddddd4"),
                             Category = "build",
-                            CompleteDate = new DateTime(2025, 8, 7, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 8, 7, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 8, 7, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "NotStarted",
                             Title = "Scena ma stać"
                         },
@@ -536,9 +561,10 @@ namespace PalletTimeLine.Api.Migrations
                         {
                             Id = new Guid("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee5"),
                             Category = "build",
-                            CompleteDate = new DateTime(2025, 8, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             EditionId = new Guid("99999999-8888-7777-6666-555555555555"),
+                            EndDate = new DateTime(2025, 8, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Priority = "Ordinary",
+                            StartDate = new DateTime(2025, 8, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Status = "NotStarted",
                             Title = "Prysznic, woda"
                         });

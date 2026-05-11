@@ -17,6 +17,11 @@ public class TasksController : ControllerBase
         _db = db;
     }
 
+    private static DateTime? ParseDateUtc(string? s) =>
+        DateTime.TryParse(s, out var d)
+            ? DateTime.SpecifyKind(d.Date, DateTimeKind.Utc)
+            : null;
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks()
     {
@@ -26,7 +31,7 @@ public class TasksController : ControllerBase
                 t.Id,
                 t.Title,
                 t.Responsible.Select(u => u.DisplayName).ToArray(),
-                t.Date,
+                t.CompleteDate.HasValue ? t.CompleteDate.Value.ToString("yyyy-MM-dd") : null,
                 t.Status.ToString(),
                 t.Priority.ToString(),
                 t.Category,
@@ -46,7 +51,7 @@ public class TasksController : ControllerBase
                 t.Id,
                 t.Title,
                 t.Responsible.Select(u => u.DisplayName).ToArray(),
-                t.Date,
+                t.CompleteDate.HasValue ? t.CompleteDate.Value.ToString("yyyy-MM-dd") : null,
                 t.Status.ToString(),
                 t.Priority.ToString(),
                 t.Category,
@@ -72,5 +77,90 @@ public class TasksController : ControllerBase
         await _db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<TaskDto>> CreateTask(TaskCreateDto dto)
+    {
+        if (!Enum.TryParse<TaskItemStatus>(dto.Status, ignoreCase: true, out var status))
+            return BadRequest($"Invalid status: {dto.Status}");
+        if (!Enum.TryParse<TaskItemPriority>(dto.Priority, ignoreCase: true, out var priority))
+            return BadRequest($"Invalid priority: {dto.Priority}");
+
+        var edition = await _db.Editions.FirstOrDefaultAsync();
+        if (edition is null) return BadRequest("No edition found.");
+
+        var responsible = dto.Who.Length > 0
+            ? await _db.Users.Where(u => dto.Who.Contains(u.DisplayName)).ToListAsync()
+            : [];
+
+        var task = new TaskItem
+        {
+            Id = Guid.NewGuid(),
+            Title = dto.Title,
+            Description = dto.Description,
+            CompleteDate = ParseDateUtc(dto.CompleteDate),
+            Status = status,
+            Priority = priority,
+            Category = dto.Category,
+            EditionId = edition.Id,
+            Responsible = responsible
+        };
+
+        _db.Tasks.Add(task);
+        await _db.SaveChangesAsync();
+
+        var result = new TaskDto(
+            task.Id,
+            task.Title,
+            task.Responsible.Select(u => u.DisplayName).ToArray(),
+            task.CompleteDate.HasValue ? task.CompleteDate.Value.ToString("yyyy-MM-dd") : null,
+            task.Status.ToString(),
+            task.Priority.ToString(),
+            task.Category,
+            task.Description);
+
+        return CreatedAtAction(nameof(GetTask), new { id = task.Id }, result);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<ActionResult<TaskDto>> UpdateTask(Guid id, TaskUpdateDto dto)
+    {
+        if (!Enum.TryParse<TaskItemStatus>(dto.Status, ignoreCase: true, out var status))
+            return BadRequest($"Invalid status: {dto.Status}");
+        if (!Enum.TryParse<TaskItemPriority>(dto.Priority, ignoreCase: true, out var priority))
+            return BadRequest($"Invalid priority: {dto.Priority}");
+
+        var task = await _db.Tasks.Include(t => t.Responsible).FirstOrDefaultAsync(t => t.Id == id);
+        if (task is null) return NotFound();
+
+        task.Title = dto.Title;
+        task.Description = dto.Description;
+        task.CompleteDate = ParseDateUtc(dto.CompleteDate);
+        task.Status = status;
+        task.Priority = priority;
+        task.Category = dto.Category;
+
+        var newResponsible = dto.Who.Length > 0
+            ? await _db.Users.Where(u => dto.Who.Contains(u.DisplayName)).ToListAsync()
+            : [];
+
+        task.Responsible.Clear();
+        foreach (var user in newResponsible)
+            task.Responsible.Add(user);
+
+        await _db.SaveChangesAsync();
+
+        var result = new TaskDto(
+            task.Id,
+            task.Title,
+            task.Responsible.Select(u => u.DisplayName).ToArray(),
+            task.CompleteDate.HasValue ? task.CompleteDate.Value.ToString("yyyy-MM-dd") : null,
+            task.Status.ToString(),
+            task.Priority.ToString(),
+            task.Category,
+            task.Description);
+
+        return Ok(result);
     }
 }

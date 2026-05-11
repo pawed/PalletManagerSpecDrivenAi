@@ -1,11 +1,16 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, MoreHorizontal, Pencil, Trash2, Info } from 'lucide-react';
-import { useAppContext } from '../context/AppContext';
-import { TASK_CATEGORIES } from '../data/tasks';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, MoreHorizontal, Pencil, Trash2, Info, Plus, CircleDot } from 'lucide-react';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+import { TASK_CATEGORIES, PEOPLE } from '../data/tasks';
 import { TODAY, isoDate, parseISO } from '../data/utils';
 import { Button } from './ui/button';
-import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
+import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from './ui/popover';
 import { cn } from '../lib/utils';
+import TaskModal from './TaskModal';
+import * as userService from '../services/userService.js';
+import * as taskService from '../services/taskService.js';
+import { useAppContext } from '../context/AppContext';
 
 const FESTIVAL_START = "2025-08-08";
 const FESTIVAL_END   = "2025-08-09";
@@ -115,18 +120,143 @@ function MiniCalendar({ lang, selected, onSelect, onClose }) {
   );
 }
 
+const STATUS_OPTIONS = [
+  { value: 'NotStarted', pl: 'Nie rozpoczęte', en: 'Not started' },
+  { value: 'InProgress', pl: 'W trakcie',      en: 'In progress' },
+  { value: 'Done',       pl: 'Zrobione',       en: 'Done'        },
+  { value: 'Blocked',    pl: 'Zablokowane',    en: 'Blocked'     },
+  { value: 'Deleted',    pl: 'Usunięte',       en: 'Deleted'     },
+];
+
+function TaskCardMenu({ task, lang, onEdit, onView, onStatusChange }) {
+  const [statusOpen, setStatusOpen] = useState(false);
+  const statusLabel = (s) => lang === 'pl' ? s.pl : s.en;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          className="shrink-0 h-5 w-5 rounded flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity text-muted-foreground hover:bg-black/10 dark:hover:bg-white/10"
+          onClick={e => e.stopPropagation()}
+        >
+          <MoreHorizontal className="h-3.5 w-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-40 p-1" align="end" sideOffset={4}>
+        {/* Szczegóły */}
+        <PopoverClose asChild>
+          <button
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12.5px] rounded hover:bg-secondary transition-colors text-foreground"
+            onClick={onView}
+          >
+            <Info className="h-3.5 w-3.5 text-muted-foreground" />
+            {lang === 'pl' ? 'Szczegóły' : 'Details'}
+          </button>
+        </PopoverClose>
+
+        {/* Edytuj */}
+        <PopoverClose asChild>
+          <button
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12.5px] rounded hover:bg-secondary transition-colors text-foreground"
+            onClick={onEdit}
+          >
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+            {lang === 'pl' ? 'Edytuj' : 'Edit'}
+          </button>
+        </PopoverClose>
+
+        <div className="my-1 h-px bg-border" />
+
+        {/* Zmień status — submenu on hover */}
+        <div
+          className="relative"
+          onMouseEnter={() => setStatusOpen(true)}
+          onMouseLeave={() => setStatusOpen(false)}
+        >
+          <button className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-[12.5px] rounded hover:bg-secondary transition-colors text-foreground">
+            <span className="flex items-center gap-2">
+              <CircleDot className="h-3.5 w-3.5 text-muted-foreground" />
+              {lang === 'pl' ? 'Zmień status' : 'Change status'}
+            </span>
+            <ChevronRight className="h-3 w-3 text-muted-foreground" />
+          </button>
+          {statusOpen && (
+            <div className="absolute left-full top-0 ml-1 w-40 bg-popover border border-border rounded-[10px] shadow-[var(--shadow)] p-1 z-[300]">
+              {STATUS_OPTIONS.filter(s => s.value !== task.status && s.value !== 'Deleted').map(s => (
+                <PopoverClose asChild key={s.value}>
+                  <button
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12.5px] rounded hover:bg-secondary transition-colors text-foreground"
+                    onClick={() => onStatusChange(task.id, s.value)}
+                  >
+                    {statusLabel(s)}
+                  </button>
+                </PopoverClose>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Usuń — tylko gdy task nie jest już Deleted */}
+        {task.status !== 'Deleted' && (
+          <>
+            <div className="my-1 h-px bg-border" />
+            <PopoverClose asChild>
+              <button
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12.5px] rounded hover:bg-secondary transition-colors text-[oklch(0.55_0.2_27)]"
+                onClick={() => onStatusChange(task.id, 'Deleted')}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {lang === 'pl' ? 'Usuń' : 'Delete'}
+              </button>
+            </PopoverClose>
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 const STATUS_COLORS = {
-  "todo":        { border: "var(--status-todo)",     bg: "var(--status-todo-bg)"     },
-  "in-progress": { border: "var(--status-progress)", bg: "var(--status-progress-bg)" },
-  "done":        { border: "var(--status-done)",     bg: "var(--status-done-bg)"     },
-  "cancelled":   { border: "var(--status-cancelled)",bg: "var(--status-cancelled-bg)"},
+  NotStarted: { border: "var(--status-todo)",     bg: "var(--status-todo-bg)"     },
+  InProgress:  { border: "var(--status-progress)", bg: "var(--status-progress-bg)" },
+  Done:        { border: "var(--status-done)",     bg: "var(--status-done-bg)"     },
+  Blocked:     { border: "oklch(0.58 0.22 25)",    bg: "oklch(0.97 0.02 25)"      },
+  Deleted:     { border: "var(--status-cancelled)",bg: "var(--status-cancelled-bg)"},
 };
 
+const GANTT_STATUSES = ['NotStarted', 'InProgress', 'Done', 'Blocked'];
+const LABEL_COL_W = 90;
+const CARD_H   = 104;
+const CARD_GAP = 6;
+const ROW_PAD  = 8;
+
 const Harmonogram = ({ lang, tasks }) => {
-  const { setTasks } = useAppContext();
+  const queryClient = useQueryClient();
+  const { showAddTask, setShowAddTask } = useAppContext();
   const [windowStart, setWindowStart] = useState(loadInitialStart);
   const [windowDays,  setWindowDays]  = useState(loadInitialStep);
   const [pulseIso,    setPulseIso]    = useState(null);
+  const [editTask,    setEditTask]    = useState(null);
+  const [viewTask,    setViewTask]    = useState(null);
+  const [people,      setPeople]      = useState(PEOPLE);
+
+  const handleStatusChange = async (id, status) => {
+    const prev = queryClient.getQueryData(['tasks']);
+    queryClient.setQueryData(['tasks'], (old) =>
+      old?.map(t => t.id === id ? { ...t, status } : t) ?? old
+    );
+    try {
+      await taskService.updateStatus(id, status);
+      toast.success('Status zaktualizowany');
+    } catch (err) {
+      queryClient.setQueryData(['tasks'], prev);
+      toast.error('Nie udało się zmienić statusu', { description: err.message });
+    }
+  };
+
+  useEffect(() => {
+    userService.getPeopleNames().then(setPeople).catch(() => {});
+  }, []);
 
   useEffect(() => { try { localStorage.setItem(LS_STEP,  String(windowDays)); }    catch (e) {} }, [windowDays]);
   useEffect(() => { try { localStorage.setItem(LS_START, isoDate(windowStart)); }  catch (e) {} }, [windowStart]);
@@ -153,9 +283,40 @@ const Harmonogram = ({ lang, tasks }) => {
 
   const dated = useMemo(() => (
     tasks
-      .filter(t => t.date && t.date >= windowStartIso && t.date <= windowEndIso)
-      .sort((a, b) => a.date.localeCompare(b.date))
+      .filter(t => t.completeDate && t.completeDate >= windowStartIso && t.completeDate <= windowEndIso)
+      .sort((a, b) => a.completeDate.localeCompare(b.completeDate))
   ), [tasks, windowStartIso, windowEndIso]);
+
+  // lane index per task: tasks sharing (status, completeDate) are stacked vertically
+  const laneMap = useMemo(() => {
+    const groups = {};
+    dated.forEach(task => {
+      if (!GANTT_STATUSES.includes(task.status)) return;
+      const key = `${task.status}|${task.completeDate}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(task.id);
+    });
+    const result = {};
+    Object.values(groups).forEach(ids => ids.forEach((id, i) => { result[id] = i; }));
+    return result;
+  }, [dated]);
+
+  // per-status row: dynamic height based on max stacked lanes
+  const rowLayout = useMemo(() => {
+    const maxLanes = {};
+    GANTT_STATUSES.forEach(s => { maxLanes[s] = 1; });
+    dated.forEach(task => {
+      if (!GANTT_STATUSES.includes(task.status)) return;
+      maxLanes[task.status] = Math.max(maxLanes[task.status], (laneMap[task.id] ?? 0) + 1);
+    });
+    const tops = {};
+    let cumTop = 0;
+    GANTT_STATUSES.forEach(s => {
+      tops[s] = cumTop;
+      cumTop += ROW_PAD * 2 + maxLanes[s] * CARD_H + Math.max(0, maxLanes[s] - 1) * CARD_GAP;
+    });
+    return { tops, heights: Object.fromEntries(GANTT_STATUSES.map(s => [s, ROW_PAD * 2 + maxLanes[s] * CARD_H + Math.max(0, maxLanes[s] - 1) * CARD_GAP])), totalHeight: cumTop };
+  }, [dated, laneMap]);
 
   const shiftBy = d => { const ns = new Date(windowStart); ns.setDate(ns.getDate() + d); setWindowStart(ns); };
 
@@ -180,18 +341,19 @@ const Harmonogram = ({ lang, tasks }) => {
   };
 
   const colPct      = 100 / windowDays;
-  const lanesHeight = Math.max(272, dated.length * ROW_HEIGHT + 28);
+  const lanesHeight = rowLayout.totalHeight;
   const rangeLabel  = days.length > 1 ? fmtRange(windowStartIso, windowEndIso, lang) : windowStartIso;
 
   const statusLabels = {
-    pl: { todo: "Nie rozpoczęto", "in-progress": "W trakcie", done: "Wykonane" },
-    en: { todo: "To do",          "in-progress": "In progress", done: "Done"   },
+    pl: { NotStarted: "Nie rozpoczęto", InProgress: "W trakcie", Done: "Wykonane", Blocked: "Zablokowane" },
+    en: { NotStarted: "To do",          InProgress: "In progress", Done: "Done",   Blocked: "Blocked"     },
   };
 
   const dotColors = {
-    "todo":        "bg-status-todo",
-    "in-progress": "bg-status-progress",
-    "done":        "bg-status-done",
+    NotStarted: "bg-status-todo",
+    InProgress:  "bg-status-progress",
+    Done:        "bg-status-done",
+    Blocked:     "bg-status-cancelled",
   };
 
   return (
@@ -244,32 +406,36 @@ const Harmonogram = ({ lang, tasks }) => {
         </Button>
 
         <div className="ml-auto flex items-center gap-3">
-          {["todo", "in-progress", "done"].map(s => (
-            <span key={s} className="flex items-center gap-1.5">
-              <span className={cn("w-2.5 h-2.5 rounded-sm", dotColors[s])} />
-              <span className="text-[11px] text-muted-foreground">{statusLabels[lang][s]}</span>
-            </span>
-          ))}
           <span className="font-mono text-[11px] text-muted-foreground">
             {dated.length} {lang === "pl" ? "zad." : "tasks"}
           </span>
+          <Button
+            size="sm"
+            className="gap-1.5 text-[12px] h-7"
+            onClick={() => setShowAddTask(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {lang === "pl" ? "Dodaj zadanie" : "Add task"}
+          </Button>
         </div>
       </div>
 
       {/* Gantt grid */}
       <div className="overflow-x-auto overflow-y-hidden">
-        {/* Header row */}
+        {/* Header row — spacer + day columns */}
         <div
           className="grid border-b border-border bg-secondary sticky top-0 z-[5] min-w-max"
-          style={{ gridTemplateColumns: `repeat(${windowDays}, minmax(140px, 1fr))` }}
+          style={{ gridTemplateColumns: `${LABEL_COL_W}px repeat(${windowDays}, minmax(140px, 1fr))` }}
         >
+          {/* Spacer for status label column */}
+          <div className="border-r border-border" />
           {days.map(d => {
             const iso = isoDate(d); const dow = d.getDay(); const dayIdx = dow === 0 ? 6 : dow - 1;
             return (
               <div
                 key={iso}
                 className={cn(
-                  "px-1.5 py-2 text-center border-l border-border first:border-l-0 font-mono text-muted-foreground relative",
+                  "px-1.5 py-2 text-center border-l border-border font-mono text-muted-foreground relative",
                   isFestival(iso) && "bg-accent text-accent-foreground",
                   isWeekend(d) && !isFestival(iso) && "bg-background",
                   iso === todayIso && "after:absolute after:bottom-[-1px] after:left-1/4 after:right-1/4 after:h-0.5 after:bg-ring after:content-['']",
@@ -283,118 +449,162 @@ const Harmonogram = ({ lang, tasks }) => {
           })}
         </div>
 
-        {/* Body */}
-        <div
-          className="relative grid min-w-max"
-          style={{
-            gridTemplateColumns: `repeat(${windowDays}, minmax(140px, 1fr))`,
-            minHeight: lanesHeight,
-          }}
-        >
-          {/* Column backgrounds */}
-          {days.map(d => {
-            const iso = isoDate(d);
-            return (
+        {/* Body — left status labels + right day grid */}
+        <div className="flex min-w-max">
+          {/* Status label column */}
+          <div
+            className="flex-shrink-0 border-r border-border bg-secondary/20 z-[4]"
+            style={{ width: LABEL_COL_W }}
+          >
+            {GANTT_STATUSES.map((s, i) => (
               <div
-                key={iso}
-                className={cn(
-                  "border-l border-border first:border-l-0",
-                  isFestival(iso) && "opacity-35 bg-accent",
-                  isWeekend(d) && !isFestival(iso) && "bg-secondary",
-                  iso === pulseIso && "gantt-pulse",
-                )}
-                style={{ gridRow: 1 }}
-              />
-            );
-          })}
-
-          {dated.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-[13px]">
-              {lang === "pl" ? "Brak zadań w tym oknie czasowym" : "No tasks in this time window"}
-            </div>
-          )}
-
-          {/* Task cards */}
-          {dated.map((task, idx) => {
-            const dayIdx = days.findIndex(d => isoDate(d) === task.date);
-            if (dayIdx < 0) return null;
-            const dur  = (task.category === "build" || task.category === "site") ? 2 : 1;
-            const span = Math.min(dur, windowDays - dayIdx);
-            const title = task.task;
-            const colors = STATUS_COLORS[task.status] ?? STATUS_COLORS.todo;
-            return (
-              <div
-                key={task.id}
-                className="group absolute rounded-md border flex flex-col gap-1 px-2.5 py-2 cursor-default transition-transform hover:-translate-y-px z-[3]"
-                style={{
-                  left:            `calc(${dayIdx * colPct}% + 3px)`,
-                  width:           `calc(${span   * colPct}% - 6px)`,
-                  top:             idx * ROW_HEIGHT + 14,
-                  height:          110,
-                  borderLeftWidth: 3,
-                  borderLeftColor: colors.border,
-                  background:      colors.bg,
-                  borderColor:     "var(--border)",
-                  boxShadow:       "var(--shadow-sm)",
-                }}
+                key={s}
+                className={cn("flex flex-col justify-center gap-1 px-2.5 border-b border-border", i % 2 === 1 && "bg-secondary/30")}
+                style={{ height: rowLayout.heights[s] }}
               >
-                {/* Title row + context menu */}
-                <div className="flex items-start gap-1 min-w-0">
-                  <p className="text-[12px] font-medium text-foreground leading-snug line-clamp-2 flex-1 min-w-0" title={title}>{title}</p>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        className="shrink-0 h-5 w-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:bg-black/10 dark:hover:bg-white/10"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <MoreHorizontal className="h-3.5 w-3.5" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-36 p-1" align="end" sideOffset={4}>
-                      <button
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12.5px] rounded hover:bg-secondary transition-colors text-foreground"
-                        onClick={() => alert(lang === "pl" ? "Szczegóły zadania (wkrótce)" : "Task details (coming soon)")}
-                      >
-                        <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                        {lang === "pl" ? "Szczegóły" : "Details"}
-                      </button>
-                      <div className="my-1 h-px bg-border" />
-                      <button
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12.5px] rounded hover:bg-secondary transition-colors text-foreground"
-                        onClick={() => alert(lang === "pl" ? "Edycja zadania (wkrótce)" : "Edit task (coming soon)")}
-                      >
-                        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                        {lang === "pl" ? "Edytuj" : "Edit"}
-                      </button>
-                      <button
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12.5px] rounded hover:bg-secondary transition-colors text-[oklch(0.55_0.2_27)]"
-                        onClick={() => setTasks(prev => prev.filter(t => t.id !== task.id))}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        {lang === "pl" ? "Usuń" : "Delete"}
-                      </button>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="flex flex-wrap gap-1 mt-auto">
-                  {task.who.length === 0 ? (
-                    <span className="font-mono text-[10.5px] text-muted-foreground italic border border-dashed border-border px-1.5 py-0.5 rounded">
-                      {lang === "pl" ? "Nieprzypisane" : "Unassigned"}
-                    </span>
-                  ) : task.who.map(w => (
-                    <span key={w} className="font-mono text-[10.5px] bg-card/60 text-muted-foreground px-1.5 py-0.5 rounded">
-                      {w}
-                    </span>
-                  ))}
-                </div>
-                <span className="font-mono text-[9.5px] font-semibold uppercase tracking-wide text-muted-foreground bg-card/60 self-start px-1.5 py-0.5 rounded">
-                  {getCatLabel(task.category)}
+                <span
+                  className="text-[9.5px] font-semibold uppercase tracking-wide leading-tight"
+                  style={{ color: STATUS_COLORS[s]?.border }}
+                >
+                  {statusLabels[lang][s]}
+                </span>
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  {dated.filter(t => t.status === s).length}
                 </span>
               </div>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* Day columns grid */}
+          <div
+            className="relative grid flex-1"
+            style={{
+              gridTemplateColumns: `repeat(${windowDays}, minmax(140px, 1fr))`,
+              height: lanesHeight,
+            }}
+          >
+            {/* Column backgrounds */}
+            {days.map(d => {
+              const iso = isoDate(d);
+              return (
+                <div
+                  key={iso}
+                  className={cn(
+                    "border-l border-border first:border-l-0",
+                    isFestival(iso) && "opacity-35 bg-accent",
+                    isWeekend(d) && !isFestival(iso) && "bg-secondary",
+                    iso === pulseIso && "gantt-pulse",
+                  )}
+                  style={{ gridRow: 1 }}
+                />
+              );
+            })}
+
+            {/* Horizontal row dividers */}
+            {GANTT_STATUSES.map((s, i) => (
+              <div
+                key={s}
+                className={cn("absolute left-0 right-0 border-b border-border", i % 2 === 1 && "bg-secondary/20")}
+                style={{ top: rowLayout.tops[s], height: rowLayout.heights[s], pointerEvents: 'none' }}
+              />
+            ))}
+
+            {dated.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-[13px]">
+                {lang === "pl" ? "Brak zadań w tym oknie czasowym" : "No tasks in this time window"}
+              </div>
+            )}
+
+            {/* Task cards */}
+            {dated.map(task => {
+              if (!GANTT_STATUSES.includes(task.status)) return null;
+              const dayIdx  = days.findIndex(d => isoDate(d) === task.completeDate);
+              if (dayIdx < 0) return null;
+              const laneIdx = laneMap[task.id] ?? 0;
+              const cardTop = rowLayout.tops[task.status] + ROW_PAD + laneIdx * (CARD_H + CARD_GAP);
+              const title   = task.task;
+              const colors  = STATUS_COLORS[task.status] ?? STATUS_COLORS.NotStarted;
+              return (
+                <div
+                  key={task.id}
+                  className="group absolute rounded-md border flex flex-col gap-1 px-2.5 py-2 cursor-default transition-transform hover:-translate-y-px z-[3]"
+                  style={{
+                    left:            `calc(${dayIdx * colPct}% + 3px)`,
+                    width:           `calc(${colPct}% - 6px)`,
+                    top:             cardTop,
+                    height:          CARD_H,
+                    borderLeftWidth: 3,
+                    borderLeftColor: colors.border,
+                    background:      colors.bg,
+                    borderColor:     "var(--border)",
+                    boxShadow:       "var(--shadow-sm)",
+                  }}
+                >
+                  <div className="flex items-start gap-1 min-w-0">
+                    <p className="text-[12px] font-medium text-foreground leading-snug line-clamp-2 flex-1 min-w-0" title={title}>{title}</p>
+                    <TaskCardMenu
+                      task={task}
+                      lang={lang}
+                      onView={() => setViewTask(task)}
+                      onEdit={() => setEditTask(task)}
+                      onStatusChange={handleStatusChange}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-auto">
+                    {task.who.length === 0 ? (
+                      <span className="font-mono text-[10.5px] text-muted-foreground italic border border-dashed border-border px-1.5 py-0.5 rounded">
+                        {lang === "pl" ? "Nieprzypisane" : "Unassigned"}
+                      </span>
+                    ) : task.who.map(w => (
+                      <span key={w} className="font-mono text-[10.5px] bg-card/60 text-muted-foreground px-1.5 py-0.5 rounded">
+                        {w}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="font-mono text-[9.5px] font-semibold uppercase tracking-wide text-muted-foreground bg-card/60 self-start px-1.5 py-0.5 rounded">
+                    {getCatLabel(task.category)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
+
+      {editTask && (
+        <TaskModal
+          mode="edit"
+          task={editTask}
+          people={people}
+          onClose={() => setEditTask(null)}
+          onSave={() => {
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            setEditTask(null);
+          }}
+        />
+      )}
+
+      {showAddTask && (
+        <TaskModal
+          mode="add"
+          people={people}
+          onClose={() => setShowAddTask(false)}
+          onSave={() => {
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            setShowAddTask(false);
+          }}
+        />
+      )}
+
+      {viewTask && (
+        <TaskModal
+          mode="view"
+          task={viewTask}
+          people={people}
+          onClose={() => setViewTask(null)}
+          onSave={() => setViewTask(null)}
+        />
+      )}
     </div>
   );
 };

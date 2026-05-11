@@ -151,3 +151,178 @@ button { font: inherit; cursor: pointer; }
 
 .gantt-pulse      { animation: ganttPulse     1.6s ease-out 1; }
 .gantt-pulse-head { animation: ganttPulseHead 1.6s ease-out 1; }
+
+/* ── Task Modal ──────────────────────────────────────────── */
+@keyframes modalFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--foreground) 35%, transparent);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  padding: 24px;
+  animation: modalFade 0.15s ease-out;
+}
+
+.modal {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal__eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  margin-bottom: 4px;
+  font-family: ui-monospace, monospace;
+}
+
+.modal__title-input {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  background: var(--card);
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: inherit;
+}
+.modal__title-input:focus {
+  outline: none;
+  border-color: var(--ring);
+}
+
+.modal__close {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  border-radius: 6px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+.modal__close:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.modal__body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.modal__row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+  align-items: center;
+  font-size: 12.5px;
+}
+.modal__row--block {
+  grid-template-columns: 1fr;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.modal__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+}
+
+.modal__input {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  width: 100%;
+}
+.modal__input:focus {
+  outline: none;
+  border-color: var(--ring);
+}
+
+.modal__textarea {
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.4;
+}
+
+.modal__foot {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* icon-btn — small action buttons used in modals and context menus */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.icon-btn:hover:not(:disabled) {
+  background: var(--secondary);
+}
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.icon-btn--primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+.icon-btn--primary:hover:not(:disabled) {
+  opacity: 0.88;
+  background: var(--primary);
+}

@@ -153,10 +153,11 @@ export const Avatars = ({ people }) => {
 
 export const StatusPill = ({ status, lang }) => {
   const labels = {
-    "todo":        I18N[lang].todo,
-    "in-progress": I18N[lang].inProgress,
-    "done":        I18N[lang].done,
-    "cancelled":   I18N[lang].cancelled,
+    NotStarted: I18N[lang].notStarted,
+    InProgress: I18N[lang].inProgress,
+    Done:       I18N[lang].done,
+    Blocked:    I18N[lang].blocked,
+    Deleted:    I18N[lang].deleted,
   };
-  return <Badge variant={status}>{labels[status]}</Badge>;
+  return <Badge variant={status}>{labels[status] ?? status}</Badge>;
 };

@@ -5,6 +5,7 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const [lang, setLang] = useState("pl");
   const [dark, setDark] = useState(false);
+  const [showAddTask, setShowAddTask] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -12,7 +13,7 @@ export function AppProvider({ children }) {
   }, [dark, lang]);
 
   return (
-    <AppContext.Provider value={{ lang, setLang, dark, setDark }}>
+    <AppContext.Provider value={{ lang, setLang, dark, setDark, showAddTask, setShowAddTask }}>
       {children}
     </AppContext.Provider>
   );

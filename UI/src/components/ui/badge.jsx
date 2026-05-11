@@ -7,10 +7,11 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        todo:        'bg-status-todo-bg text-status-todo',
-        'in-progress':'bg-status-progress-bg text-status-progress',
-        done:        'bg-status-done-bg text-status-done',
-        cancelled:   'bg-status-cancelled-bg text-status-cancelled line-through opacity-80',
+        NotStarted:  'bg-status-todo-bg text-status-todo',
+        InProgress:  'bg-status-progress-bg text-status-progress',
+        Done:        'bg-status-done-bg text-status-done',
+        Blocked:     'bg-[oklch(0.97_0.02_25)] text-[oklch(0.58_0.22_25)]',
+        Deleted:     'bg-status-cancelled-bg text-status-cancelled line-through opacity-80',
         default:     'bg-secondary text-secondary-foreground',
         brand:       'bg-brand-soft text-brand-text',
       },

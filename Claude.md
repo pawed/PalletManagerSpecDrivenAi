@@ -33,6 +33,32 @@ Zawsze deleguj pracę do właściwego subagenta — nie implementuj samodzielnie
 - Twórz jednostkowe lub integracyjne testy tam, gdzie to ma sens.
 - Zadbaj o czytelność i nazewnictwo.
 
+## Spec-Driven Workflow
+
+### Jak użytkownik tworzy zadania
+Zamiast opisywać zadanie w chacie, użytkownik tworzy plik w `specs/`:
+- Kopiuje `specs/_TEMPLATE.md`, nadaje nazwę `SPEC-NNN-nazwa.md`
+- Wypełnia treść i ustawia `status: ready`
+- Mówi Claude: `"Wykonaj spec: SPEC-NNN"` lub `"Wykonaj wszystkie specs o statusie ready"`
+
+### Jak Claude przetwarza spec
+1. Czyta wskazany plik spec z `specs/`
+2. Ustawia `status: in-progress` w pliku spec
+3. Jeśli wymagania są niejednoznaczne — wchodzi w plan mode i pyta użytkownika
+4. Deleguje do agentów zgodnie z tabelą w sekcji "Delegacja do agentów"
+5. Po zakończeniu ustawia `status: done` i wypełnia checkboxy kryteriów akceptacji
+
+### Kolejność priorytetów
+`high` → `medium` → `low`; w ramach priorytetu: API przed UI przed Integracją.
+
+### Struktura katalogu specs/
+```
+specs/
+├── _TEMPLATE.md          — szablon do kopiowania
+├── SPEC-001-*.md         — gotowe lub zrobione speci
+└── SPEC-NNN-*.md         — kolejne funkcjonalności
+```
+
 ## Wskazówki
 - Jeśli nie widzisz nowych zmian w Prototypie, nie zmieniaj UI.
 - Nie kopiuj prototypu 1:1 wewnętrznie; odtwórz wygląd i zachowanie.

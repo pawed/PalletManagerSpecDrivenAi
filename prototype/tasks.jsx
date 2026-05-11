@@ -2,7 +2,7 @@
 const { useState, useMemo, useEffect, useRef } = React;
 
 // ============ MultiSelect ============
-function MultiSelect({ label, options, values, onChange, lang }) {
+function MultiSelect({ label, options, values, onChange, lang, tags }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -16,6 +16,7 @@ function MultiSelect({ label, options, values, onChange, lang }) {
     if (values.includes(v)) onChange(values.filter(x => x !== v));
     else onChange([...values, v]);
   };
+  const remove = (v, e) => { e.stopPropagation(); onChange(values.filter(x => x !== v)); };
   const clear = (e) => { e.stopPropagation(); onChange([]); };
 
   const buttonLabel = values.length === 0
@@ -24,11 +25,31 @@ function MultiSelect({ label, options, values, onChange, lang }) {
       ? (options.find(o => o.value === values[0])?.label || values[0])
       : `${label}: ${values.length}`;
 
+  const showTags = tags && values.length > 0;
+
   return (
     <div className="ms" ref={ref}>
-      <button type="button" className="ms__btn" data-open={open} onClick={() => setOpen(!open)}>
-        <span className="ms__btn-label">{buttonLabel}</span>
-        {values.length > 0 && (
+      <button type="button" className={"ms__btn" + (showTags ? " ms__btn--tags" : "")} data-open={open} onClick={() => setOpen(!open)}>
+        {showTags ? (
+          <span className="ms__tags">
+            {values.map(v => {
+              const opt = options.find(o => o.value === v);
+              return (
+                <span key={v} className="ms__tag" onClick={(e) => e.stopPropagation()}>
+                  <span>{opt ? opt.label : v}</span>
+                  <button
+                    type="button"
+                    className="ms__tag-x"
+                    aria-label={(lang === "pl" ? "Usuń " : "Remove ") + v}
+                    onClick={(e) => remove(v, e)}>×</button>
+                </span>
+              );
+            })}
+          </span>
+        ) : (
+          <span className="ms__btn-label">{buttonLabel}</span>
+        )}
+        {!showTags && values.length > 0 && (
           <span className="ms__clear" onClick={clear} title={lang === "pl" ? "Wyczyść" : "Clear"}>×</span>
         )}
         <svg className="ms__caret" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l3 3 3-3"/></svg>
@@ -52,7 +73,7 @@ function MultiSelect({ label, options, values, onChange, lang }) {
   );
 }
 
-function TasksSection({ lang, tasks, setTasks, filterPersons, setFilterPersons, filterCategories, setFilterCategories, query, setQuery }) {
+function TasksSection({ lang, tasks, setTasks, filterPersons, setFilterPersons, filterCategories, setFilterCategories, query, setQuery, showAddTask, setShowAddTask }) {
   const t = I18N[lang];
   const [tab, setTab] = useState("list");
 
@@ -121,7 +142,17 @@ function TasksSection({ lang, tasks, setTasks, filterPersons, setFilterPersons, 
       {tab === "list" ? (
         <TaskList grouped={grouped} lang={lang} toggleStatus={toggleStatus} />
       ) : (
-        <Gantt tasks={filtered} lang={lang} />
+        <Gantt tasks={filtered} lang={lang} setTasks={setTasks} />
+      )}
+
+      {showAddTask && (
+        <AddTaskModal
+          lang={lang}
+          onClose={() => setShowAddTask && setShowAddTask(false)}
+          onAdd={(created) => {
+            if (setTasks) setTasks((prev) => [...prev, created]);
+            setShowAddTask && setShowAddTask(false);
+          }} />
       )}
     </>
   );
@@ -285,12 +316,15 @@ function MiniCalendar({ value, onPick, lang }) {
   );
 }
 
-function Gantt({ tasks, lang }) {
+function Gantt({ tasks, lang, setTasks }) {
   const t = I18N[lang];
   const [windowStart, setWindowStart] = useState(loadInitialStart);
   const [windowDays, setWindowDays] = useState(loadInitialStep);
   const [calOpen, setCalOpen] = useState(false);
   const [pulseIso, setPulseIso] = useState(null);
+  const [menuId, setMenuId] = useState(null);
+  const [detailsTask, setDetailsTask] = useState(null);
+  const [editTask, setEditTask] = useState(null);
   const calRef = useRef(null);
 
   // Persist
@@ -308,6 +342,23 @@ function Gantt({ tasks, lang }) {
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [calOpen]);
+
+  // Close card menu on outside click / Esc
+  useEffect(() => {
+    if (menuId == null) return;
+    const onDoc = (e) => {
+      if (!e.target.closest || !e.target.closest(".gantt14__card-menu, .gantt14__card-menu-btn")) {
+        setMenuId(null);
+      }
+    };
+    const onKey = (e) => { if (e.key === "Escape") setMenuId(null); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuId]);
 
   // Clear pulse after animation
   useEffect(() => {
@@ -480,6 +531,7 @@ function Gantt({ tasks, lang }) {
               const dur = task.category === "build" || task.category === "site" ? 2 : 1;
               const span = Math.min(dur, windowDays - dayIdx);
               const cat = FESTIVAL_DATA.CATEGORIES.find(c => c.id === task.category);
+              const isMenuOpen = menuId === task.id;
               return (
                 <div
                   key={task.id}
@@ -490,6 +542,36 @@ function Gantt({ tasks, lang }) {
                     top: idx * ROW_HEIGHT,
                   }}
                   title={lang === "pl" ? task.task : task.taskEn}>
+                  <button
+                    type="button"
+                    className="gantt14__card-menu-btn"
+                    data-open={isMenuOpen}
+                    aria-label={lang === "pl" ? "Menu zadania" : "Task menu"}
+                    onClick={(e) => { e.stopPropagation(); setMenuId(isMenuOpen ? null : task.id); }}>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg>
+                  </button>
+                  {isMenuOpen && (
+                    <div className="gantt14__card-menu" role="menu">
+                      <button type="button" className="gantt14__card-menu-item" onClick={() => { setMenuId(null); setDetailsTask(task); }}>
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 7v4M8 5v.01" strokeLinecap="round"/></svg>
+                        <span>{lang === "pl" ? "Szczegóły" : "Details"}</span>
+                      </button>
+                      <button type="button" className="gantt14__card-menu-item" onClick={() => { setMenuId(null); setEditTask({ ...task, who: [...task.who] }); }}>
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11L11 2.5z"/></svg>
+                        <span>{lang === "pl" ? "Edycja" : "Edit"}</span>
+                      </button>
+                      <button type="button" className="gantt14__card-menu-item gantt14__card-menu-item--danger" onClick={() => {
+                        setMenuId(null);
+                        const msg = lang === "pl" ? "Usunąć zadanie?" : "Delete this task?";
+                        if (window.confirm(msg) && setTasks) {
+                          setTasks((prev) => prev.filter(x => x.id !== task.id));
+                        }
+                      }}>
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 4h10M6 4V2.5h4V4M4.5 4l.5 9h6l.5-9M7 7v3M9 7v3"/></svg>
+                        <span>{lang === "pl" ? "Usuń" : "Delete"}</span>
+                      </button>
+                    </div>
+                  )}
                   <div className="gantt14__card-title">
                     {lang === "pl" ? task.task : task.taskEn}
                   </div>
@@ -509,6 +591,257 @@ function Gantt({ tasks, lang }) {
           </div>
         </div>
       </div>
+
+      {detailsTask && (
+        <div className="modal-backdrop" onClick={() => setDetailsTask(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="modal__head">
+              <div>
+                <div className="modal__eyebrow">{lang === "pl" ? "Zadanie" : "Task"} · #{detailsTask.id}</div>
+                <div className="modal__title">{lang === "pl" ? detailsTask.task : detailsTask.taskEn}</div>
+              </div>
+              <button type="button" className="modal__close" onClick={() => setDetailsTask(null)} aria-label="Close">×</button>
+            </div>
+            <div className="modal__body">
+              <div className="modal__row">
+                <span className="modal__label">{t.status}</span>
+                <span><UI.StatusPill status={detailsTask.status} lang={lang} /></span>
+              </div>
+              <div className="modal__row">
+                <span className="modal__label">{t.date}</span>
+                <span className="modal__value">{detailsTask.date ? utils.fmtDate(detailsTask.date, lang) : t.noDate}</span>
+              </div>
+              <div className="modal__row">
+                <span className="modal__label">{t.category}</span>
+                <span>{(() => {
+                  const c = FESTIVAL_DATA.CATEGORIES.find(x => x.id === detailsTask.category);
+                  return c ? <span className="cat-tag">{c[lang]}</span> : "—";
+                })()}</span>
+              </div>
+              <div className="modal__row">
+                <span className="modal__label">{t.assignees}</span>
+                <span className="modal__value">
+                  {detailsTask.who.length > 0 ? detailsTask.who.join(", ") : (lang === "pl" ? "Nieprzypisane" : "Unassigned")}
+                </span>
+              </div>
+              {detailsTask.note && (
+                <div className="modal__row modal__row--block">
+                  <span className="modal__label">{t.note}</span>
+                  <span className="modal__value">{detailsTask.note}</span>
+                </div>
+              )}
+            </div>
+            <div className="modal__foot">
+              <button type="button" className="icon-btn" onClick={() => setDetailsTask(null)}>
+                {lang === "pl" ? "Zamknij" : "Close"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editTask && (
+        <EditTaskModal
+          task={editTask}
+          lang={lang}
+          onClose={() => setEditTask(null)}
+          onSave={(updated) => {
+            if (setTasks) setTasks((prev) => prev.map(x => x.id === updated.id ? updated : x));
+            setEditTask(null);
+          }} />
+      )}
+    </div>
+  );
+}
+
+function EditTaskModal({ task, lang, onClose, onSave }) {
+  const t = I18N[lang];
+  const [form, setForm] = useState({
+    title: lang === "pl" ? task.task : task.taskEn,
+    status: task.status,
+    date: task.date || "",
+    category: task.category,
+    who: [...(task.who || [])],
+    note: task.note || "",
+  });
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const togglePerson = (p) => {
+    setForm(f => ({ ...f, who: f.who.includes(p) ? f.who.filter(x => x !== p) : [...f.who, p] }));
+  };
+
+  const save = (e) => {
+    e.preventDefault();
+    const updated = {
+      ...task,
+      [lang === "pl" ? "task" : "taskEn"]: form.title,
+      status: form.status,
+      date: form.date || null,
+      category: form.category,
+      who: form.who,
+      note: form.note,
+    };
+    onSave(updated);
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <form className="modal modal--edit" onClick={(e) => e.stopPropagation()} onSubmit={save}>
+        <div className="modal__head">
+          <div>
+            <div className="modal__eyebrow">{lang === "pl" ? "Edycja zadania" : "Edit task"} · #{task.id}</div>
+            <input
+              className="modal__title-input"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder={lang === "pl" ? "Nazwa zadania" : "Task name"} />
+          </div>
+          <button type="button" className="modal__close" onClick={onClose} aria-label="Close">×</button>
+        </div>
+        <div className="modal__body">
+          <div className="modal__row">
+            <span className="modal__label">{t.status}</span>
+            <select className="modal__input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              {FESTIVAL_DATA.STATUSES.map(s => <option key={s.id} value={s.id}>{s[lang]}</option>)}
+            </select>
+          </div>
+          <div className="modal__row">
+            <span className="modal__label">{t.date}</span>
+            <input type="date" className="modal__input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          </div>
+          <div className="modal__row">
+            <span className="modal__label">{t.category}</span>
+            <select className="modal__input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              {FESTIVAL_DATA.CATEGORIES.map(c => <option key={c.id} value={c.id}>{c[lang]}</option>)}
+            </select>
+          </div>
+          <div className="modal__row">
+            <span className="modal__label">{t.assignees}</span>
+            <div className="modal__ms">
+              <MultiSelect
+                label={t.assignees}
+                values={form.who}
+                onChange={(vals) => setForm({ ...form, who: vals })}
+                options={FESTIVAL_DATA.PEOPLE.map(p => ({ value: p, label: p }))}
+                lang={lang}
+                tags />
+            </div>
+          </div>
+          <div className="modal__row modal__row--block">
+            <span className="modal__label">{t.note}</span>
+            <textarea className="modal__input modal__textarea" rows="3" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={lang === "pl" ? "Dodatkowe uwagi…" : "Additional notes…"} />
+          </div>
+        </div>
+        <div className="modal__foot">
+          <button type="button" className="icon-btn" onClick={onClose}>
+            {lang === "pl" ? "Anuluj" : "Cancel"}
+          </button>
+          <button type="submit" className="icon-btn icon-btn--primary">
+            {lang === "pl" ? "Zapisz" : "Save"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function AddTaskModal({ lang, onClose, onAdd }) {
+  const t = I18N[lang];
+  const [form, setForm] = useState({
+    title: "",
+    status: "todo",
+    date: "",
+    category: FESTIVAL_DATA.CATEGORIES[0]?.id || "",
+    who: [],
+    note: "",
+  });
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const save = (e) => {
+    e.preventDefault();
+    if (!form.title.trim()) return;
+    const nextId = "T" + Date.now().toString(36);
+    const created = {
+      id: nextId,
+      task: form.title,
+      taskEn: form.title,
+      status: form.status,
+      date: form.date || null,
+      category: form.category,
+      who: form.who,
+      note: form.note,
+    };
+    onAdd(created);
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <form className="modal modal--edit" onClick={(e) => e.stopPropagation()} onSubmit={save}>
+        <div className="modal__head">
+          <div>
+            <div className="modal__eyebrow">{lang === "pl" ? "Nowe zadanie" : "New task"}</div>
+            <input
+              className="modal__title-input"
+              value={form.title}
+              autoFocus
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder={lang === "pl" ? "Nazwa zadania" : "Task name"} />
+          </div>
+          <button type="button" className="modal__close" onClick={onClose} aria-label="Close">×</button>
+        </div>
+        <div className="modal__body">
+          <div className="modal__row">
+            <span className="modal__label">{t.status}</span>
+            <select className="modal__input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              {FESTIVAL_DATA.STATUSES.map(s => <option key={s.id} value={s.id}>{s[lang]}</option>)}
+            </select>
+          </div>
+          <div className="modal__row">
+            <span className="modal__label">{t.date}</span>
+            <input type="date" className="modal__input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          </div>
+          <div className="modal__row">
+            <span className="modal__label">{t.category}</span>
+            <select className="modal__input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              {FESTIVAL_DATA.CATEGORIES.map(c => <option key={c.id} value={c.id}>{c[lang]}</option>)}
+            </select>
+          </div>
+          <div className="modal__row">
+            <span className="modal__label">{t.assignees}</span>
+            <div className="modal__ms">
+              <MultiSelect
+                label={t.assignees}
+                values={form.who}
+                onChange={(vals) => setForm({ ...form, who: vals })}
+                options={FESTIVAL_DATA.PEOPLE.map(p => ({ value: p, label: p }))}
+                lang={lang}
+                tags />
+            </div>
+          </div>
+          <div className="modal__row modal__row--block">
+            <span className="modal__label">{t.note}</span>
+            <textarea className="modal__input modal__textarea" rows="3" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={lang === "pl" ? "Dodatkowe uwagi…" : "Additional notes…"} />
+          </div>
+        </div>
+        <div className="modal__foot">
+          <button type="button" className="icon-btn" onClick={onClose}>
+            {lang === "pl" ? "Anuluj" : "Cancel"}
+          </button>
+          <button type="submit" className="icon-btn icon-btn--primary" disabled={!form.title.trim()}>
+            {lang === "pl" ? "Dodaj" : "Add"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

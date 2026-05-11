@@ -40,6 +40,9 @@ export const I18N = {
     done:          "Wykonane",
     todo:          "Do zrobienia",
     cancelled:     "Anulowane",
+    notStarted:    "Nie rozpoczęte",
+    blocked:       "Zablokowane",
+    deleted:       "Usunięte",
   },
   en: {
     appTitle:      "PalletTimeLine",
@@ -82,5 +85,8 @@ export const I18N = {
     done:          "Done",
     todo:          "To do",
     cancelled:     "Cancelled",
+    notStarted:    "Not started",
+    blocked:       "Blocked",
+    deleted:       "Deleted",
   },
 };
