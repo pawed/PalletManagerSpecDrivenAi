@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PalletTimeLine.Api.Data;
-using PalletTimeLine.Api.DTOs;
+using PalletTimeLine.Api.Application.DTOs;
+using PalletTimeLine.Api.Application.Services;
 
 namespace PalletTimeLine.Api.Controllers;
 
@@ -9,20 +8,15 @@ namespace PalletTimeLine.Api.Controllers;
 [Route("api/[controller]")]
 public class RevenueController : ControllerBase
 {
-    private readonly PalletTimelineDbContext _db;
+    private readonly IRevenueService _revenueService;
 
-    public RevenueController(PalletTimelineDbContext db)
+    public RevenueController(IRevenueService revenueService)
     {
-        _db = db;
+        _revenueService = revenueService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<RevenueDto>>> GetRevenue()
-    {
-        var revenue = await _db.Revenues.AsNoTracking()
-            .Select(r => new RevenueDto(r.Id, r.Name, r.Amount, r.Category))
-            .ToListAsync();
-
-        return Ok(revenue);
-    }
+    [ProducesResponseType(typeof(IEnumerable<RevenueDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRevenue(CancellationToken cancellationToken)
+        => Ok(await _revenueService.GetAllAsync(cancellationToken));
 }

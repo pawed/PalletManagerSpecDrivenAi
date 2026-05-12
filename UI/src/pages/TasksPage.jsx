@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Loader2, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { I18N } from '../data/i18n';
 import { PEOPLE, TASK_CATEGORIES } from '../data/tasks';
 import { StatusPill } from '../components/Layout';
@@ -10,10 +9,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { MultiSelect } from '../components/ui/multi-select';
 import Harmonogram from '../components/Harmonogram';
 import { useAppContext } from '../context/AppContext';
-import * as taskService from '../services/taskService.js';
-import * as userService from '../services/userService.js';
-
-const TASKS_STALE = 10 * 60 * 1000; // 10 min
+import { useTasks, useUpdateTaskStatus } from '../hooks/useTasks.js';
+import { usePeople } from '../hooks/useUsers.js';
+import { queryKeys } from '../lib/queryKeys.js';
 
 const TasksPage = () => {
   const { lang } = useAppContext();
@@ -25,36 +23,11 @@ const TasksPage = () => {
   const [filterStatuses,   setFilterStatuses]   = useState([]);
   const [query,            setQuery]            = useState("");
 
-  const { data: tasks = [], isLoading: loadingTasks, isFetching } = useQuery({
-    queryKey: ['tasks'],
-    queryFn: taskService.getAll,
-    staleTime: TASKS_STALE,
-    onError: err => toast.error('Błąd ładowania zadań', { description: err.message }),
-  });
+  const { data: tasks = [], isLoading: loadingTasks, isFetching } = useTasks();
+  const { data: people = PEOPLE } = usePeople();
+  const mutation = useUpdateTaskStatus();
 
-  const { data: people = PEOPLE } = useQuery({
-    queryKey: ['people'],
-    queryFn: () => userService.getPeopleNames().catch(() => PEOPLE),
-    staleTime: Infinity,
-  });
-
-  const mutation = useMutation({
-    mutationFn: ({ id, status }) => taskService.updateStatus(id, status),
-    onMutate: async ({ id, status }) => {
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const prev = queryClient.getQueryData(['tasks']);
-      queryClient.setQueryData(['tasks'], old =>
-        old.map(t => t.id === id ? { ...t, status } : t)
-      );
-      return { prev };
-    },
-    onError: (err, _, ctx) => {
-      queryClient.setQueryData(['tasks'], ctx.prev);
-      toast.error('Nie udało się zmienić statusu', { description: err.message });
-    },
-  });
-
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['tasks'] });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
 
   const personOptions = people.map(p => ({ value: p, label: p }));
   const statusOptions = [

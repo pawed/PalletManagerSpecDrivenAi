@@ -1,35 +1,28 @@
 using Microsoft.EntityFrameworkCore;
-using PalletTimeLine.Api.Data;
-using PalletTimeLine.Api.Services;
+using PalletTimeLine.Api.Extensions;
+using PalletTimeLine.Api.Infrastructure.Data;
+using PalletTimeLine.Api.Presentation.Middleware;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Host.AddSerilogLogging();
+
 builder.Services.AddCors(options =>
-{
     options.AddPolicy("Frontend", policy =>
         policy.WithOrigins("http://localhost:3000")
               .AllowAnyHeader()
-              .AllowAnyMethod());
-});
+              .AllowAnyMethod()));
 
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddScoped<IAuditService, AuditService>();
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (!string.IsNullOrWhiteSpace(connectionString))
-{
-    builder.Services.AddDbContext<PalletTimelineDbContext>(options =>
-        options.UseNpgsql(connectionString));
-}
-else
-{
-    builder.Services.AddDbContext<PalletTimelineDbContext>(options =>
-        options.UseInMemoryDatabase("PalletTimeLine"));
-}
+builder.Services.AddOpenApi();
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddObservability();
 
 var app = builder.Build();
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -39,8 +32,8 @@ using (var scope = app.Services.CreateScope())
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();

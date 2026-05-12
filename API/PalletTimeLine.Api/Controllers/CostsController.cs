@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PalletTimeLine.Api.Data;
-using PalletTimeLine.Api.DTOs;
+using PalletTimeLine.Api.Application.DTOs;
+using PalletTimeLine.Api.Application.Services;
 
 namespace PalletTimeLine.Api.Controllers;
 
@@ -9,20 +8,15 @@ namespace PalletTimeLine.Api.Controllers;
 [Route("api/[controller]")]
 public class CostsController : ControllerBase
 {
-    private readonly PalletTimelineDbContext _db;
+    private readonly ICostService _costService;
 
-    public CostsController(PalletTimelineDbContext db)
+    public CostsController(ICostService costService)
     {
-        _db = db;
+        _costService = costService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<CostDto>>> GetCosts()
-    {
-        var costs = await _db.Costs.AsNoTracking()
-            .Select(c => new CostDto(c.Id, c.Name, c.Amount, c.Category))
-            .ToListAsync();
-
-        return Ok(costs);
-    }
+    [ProducesResponseType(typeof(IEnumerable<CostDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCosts(CancellationToken cancellationToken)
+        => Ok(await _costService.GetAllAsync(cancellationToken));
 }

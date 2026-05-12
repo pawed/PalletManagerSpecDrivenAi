@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PalletTimeLine.Api.Data;
-using PalletTimeLine.Api.DTOs;
-using PalletTimeLine.Api.Models;
+using PalletTimeLine.Api.Application.DTOs;
+using PalletTimeLine.Api.Application.Services;
 
 namespace PalletTimeLine.Api.Controllers;
 
@@ -10,82 +8,50 @@ namespace PalletTimeLine.Api.Controllers;
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
-    private readonly PalletTimelineDbContext _db;
+    private readonly IUserService _userService;
 
-    public UsersController(PalletTimelineDbContext db)
+    public UsersController(IUserService userService)
     {
-        _db = db;
+        _userService = userService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()
+    [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUsers(CancellationToken cancellationToken)
+        => Ok(await _userService.GetAllAsync(cancellationToken));
+
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetUser(Guid id, CancellationToken cancellationToken)
     {
-        var users = await _db.Users.AsNoTracking()
-            .Select(u => new UserDto(u.Id, u.FirstName, u.LastName, u.UserName, u.DisplayName, u.IsActive))
-            .ToListAsync();
-
-        return Ok(users);
-    }
-
-    [HttpGet("{id}")]
-    public async Task<ActionResult<UserDto>> GetUser(Guid id)
-    {
-        var user = await _db.Users.AsNoTracking()
-            .Where(u => u.Id == id)
-            .Select(u => new UserDto(u.Id, u.FirstName, u.LastName, u.UserName, u.DisplayName, u.IsActive))
-            .FirstOrDefaultAsync();
-
-        return user is not null ? Ok(user) : NotFound();
+        var user = await _userService.GetByIdAsync(id, cancellationToken);
+        return user is null ? NotFound() : Ok(user);
     }
 
     [HttpPost]
-    public async Task<ActionResult<UserDto>> CreateUser(UserCreateDto request)
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
+    public async Task<IActionResult> CreateUser(UserCreateDto request, CancellationToken cancellationToken)
     {
-        var user = new User
-        {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            UserName = request.UserName,
-            DisplayName = request.DisplayName,
-            IsActive = request.IsActive,
-        };
-
-        _db.Users.Add(user);
-        await _db.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetUser), new { id = user.Id }, new UserDto(user.Id, user.FirstName, user.LastName, user.UserName, user.DisplayName, user.IsActive));
+        var user = await _userService.CreateAsync(request, cancellationToken);
+        return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
     }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateUser(Guid id, UserUpdateDto request)
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateUser(Guid id, UserUpdateDto request, CancellationToken cancellationToken)
     {
-        var user = await _db.Users.FindAsync(id);
-        if (user is null)
-        {
-            return NotFound();
-        }
-
-        user.FirstName = request.FirstName;
-        user.LastName = request.LastName;
-        user.UserName = request.UserName;
-        user.DisplayName = request.DisplayName;
-        user.IsActive = request.IsActive;
-
-        await _db.SaveChangesAsync();
-        return NoContent();
+        var found = await _userService.UpdateAsync(id, request, cancellationToken);
+        return found ? NoContent() : NotFound();
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteUser(Guid id)
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteUser(Guid id, CancellationToken cancellationToken)
     {
-        var user = await _db.Users.FindAsync(id);
-        if (user is null)
-        {
-            return NotFound();
-        }
-
-        _db.Users.Remove(user);
-        await _db.SaveChangesAsync();
-        return NoContent();
+        var found = await _userService.DeleteAsync(id, cancellationToken);
+        return found ? NoContent() : NotFound();
     }
 }

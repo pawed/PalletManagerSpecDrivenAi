@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Loader2, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { I18N } from '../data/i18n';
 import { WH_CATEGORIES } from '../data/warehouse';
 import { Input } from '../components/ui/input';
 import { cn } from '../lib/utils';
 import { useAppContext } from '../context/AppContext';
-import * as warehouseService from '../services/warehouseService.js';
+import { useWarehouse } from '../hooks/useWarehouse.js';
+import { queryKeys } from '../lib/queryKeys.js';
 
 const WarehousePage = () => {
   const { lang } = useAppContext();
@@ -18,14 +18,9 @@ const WarehousePage = () => {
   const [filterCategories, setFilterCategories] = useState([]);
   const [query,            setQuery]            = useState("");
 
-  const { data: items = [], isLoading, isFetching } = useQuery({
-    queryKey: ['warehouse'],
-    queryFn: warehouseService.getAll,
-    staleTime: Infinity,
-    onError: err => toast.error('Błąd ładowania magazynu', { description: err.message }),
-  });
+  const { data: items = [], isLoading, isFetching } = useWarehouse();
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['warehouse'] });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.warehouse.all });
 
   const locations = useMemo(
     () => [...new Set(items.map(it => it.location).filter(Boolean))],

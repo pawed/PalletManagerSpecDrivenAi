@@ -1,16 +1,13 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { I18N } from '../data/i18n';
-import { fmtPLN, isoDate, TODAY } from '../data/utils';
+import { fmtPLN } from '../data/utils';
 import { Avatars } from '../components/Layout';
 import { useAppContext } from '../context/AppContext';
-import * as taskService      from '../services/taskService.js';
-import * as costService      from '../services/costService.js';
-import * as revenueService   from '../services/revenueService.js';
-import * as warehouseService from '../services/warehouseService.js';
+import { useOverview } from '../hooks/useOverview.js';
+import { queryKeys } from '../lib/queryKeys.js';
 
 const OverviewPage = () => {
   const { lang } = useAppContext();
@@ -18,44 +15,11 @@ const OverviewPage = () => {
   const t = I18N[lang];
   const queryClient = useQueryClient();
 
-  // Reuse the same queryKeys as individual pages — data comes from cache when already fetched
-  const { data: tasks   = [], isLoading: l1, isFetching } = useQuery({ queryKey: ['tasks'],     queryFn: taskService.getAll,      staleTime: 10 * 60 * 1000, onError: err => toast.error('Błąd', { description: err.message }) });
-  const { data: costs   = [], isLoading: l2 } = useQuery({ queryKey: ['costs'],     queryFn: costService.getAll,      staleTime: Infinity });
-  const { data: revenue = [], isLoading: l3 } = useQuery({ queryKey: ['revenue'],   queryFn: revenueService.getAll,   staleTime: Infinity });
-  const { data: items   = [], isLoading: l4 } = useQuery({ queryKey: ['warehouse'], queryFn: warehouseService.getAll, staleTime: Infinity });
+  const { data: overview, isLoading, isFetching } = useOverview();
 
-  const refresh = () => Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['tasks'] }),
-    queryClient.invalidateQueries({ queryKey: ['costs'] }),
-    queryClient.invalidateQueries({ queryKey: ['revenue'] }),
-    queryClient.invalidateQueries({ queryKey: ['warehouse'] }),
-  ]);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.overview.all });
 
-  const locations = useMemo(
-    () => [...new Set(items.map(it => it.location).filter(Boolean))],
-    [items]
-  );
-
-  const tasksDone  = tasks.filter(x => x.status === "Done").length;
-  const tasksTotal = tasks.filter(x => x.status !== "Deleted").length;
-  const totalCosts   = costs.reduce((s, c) => s + c.amount, 0);
-  const totalRevenue = revenue.reduce((s, r) => s + r.amount, 0);
-  const balance = totalRevenue - totalCosts;
-
-  const upcoming = useMemo(() => tasks
-    .filter(x => x.completeDate && x.status !== "Done" && x.status !== "Deleted")
-    .filter(x => x.completeDate >= isoDate(TODAY))
-    .sort((a, b) => a.completeDate.localeCompare(b.completeDate))
-    .slice(0, 6),
-    [tasks]);
-
-  const statusBreakdown = useMemo(() => {
-    const m = { NotStarted: 0, InProgress: 0, Done: 0, Blocked: 0, Deleted: 0 };
-    tasks.forEach(x => m[x.status]++);
-    return m;
-  }, [tasks]);
-
-  if (l1 || l2 || l3 || l4) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -63,35 +27,39 @@ const OverviewPage = () => {
     );
   }
 
+  const sb = overview?.statusBreakdown;
+  const totalAllTasks = (sb?.done ?? 0) + (sb?.inProgress ?? 0) + (sb?.notStarted ?? 0) + (sb?.blocked ?? 0) + (sb?.deleted ?? 0);
+
   const kpis = [
     {
       label: t.tasksDone,
-      value: <>{tasksDone}<span className="text-muted-foreground text-base font-normal"> / {tasksTotal}</span></>,
-      delta: `${tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0}%`,
+      value: <>{overview?.tasksDone ?? 0}<span className="text-muted-foreground text-base font-normal"> / {overview?.tasksTotal ?? 0}</span></>,
+      delta: `${(overview?.tasksTotal ?? 0) > 0 ? Math.round(((overview?.tasksDone ?? 0) / overview.tasksTotal) * 100) : 0}%`,
       accent: true,
     },
-    { label: t.inProgress, value: statusBreakdown.InProgress },
+    { label: t.inProgress, value: overview?.inProgress ?? 0 },
     {
       label: t.revenue,
-      value: fmtPLN(totalRevenue).replace(" zł", ""),
-      delta: `PLN · ${revenue.length} ${lang === "pl" ? "pozycji" : "items"}`,
+      value: fmtPLN(overview?.totalRevenue ?? 0).replace(" zł", ""),
+      delta: `PLN · ${overview?.revenueEntries ?? 0} ${lang === "pl" ? "pozycji" : "items"}`,
       positive: true,
     },
     {
       label: t.balance,
-      value: `${balance >= 0 ? "+" : ""}${fmtPLN(balance).replace(" zł", "")}`,
-      delta: `${fmtPLN(totalCosts)} ${t.costs.toLowerCase()}`,
-      negative: balance < 0,
+      value: `${(overview?.balance ?? 0) >= 0 ? "+" : ""}${fmtPLN(overview?.balance ?? 0).replace(" zł", "")}`,
+      delta: `${fmtPLN(overview?.totalCosts ?? 0)} ${t.costs.toLowerCase()}`,
+      negative: (overview?.balance ?? 0) < 0,
     },
   ];
 
   return (
     <div className="relative">
-      {isFetching && !(l1 || l2 || l3 || l4) && (
+      {isFetching && !isLoading && (
         <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-[1px] flex items-center justify-center rounded-lg">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       )}
+
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-3.5 mb-5">
         {kpis.map((k, i) => (
@@ -117,7 +85,7 @@ const OverviewPage = () => {
             {lang === "pl" ? "Postęp przygotowań" : "Preparation progress"}
           </p>
           <div className="flex items-center gap-3">
-            <p className="text-[11px] text-muted-foreground font-mono">{tasks.length} {lang === "pl" ? "zadań" : "tasks"}</p>
+            <p className="text-[11px] text-muted-foreground font-mono">{totalAllTasks} {lang === "pl" ? "zadań" : "tasks"}</p>
             <button
               onClick={refresh}
               className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
@@ -128,10 +96,10 @@ const OverviewPage = () => {
           </div>
         </div>
         <div className="flex h-2.5 rounded-full overflow-hidden bg-secondary">
-          <div style={{ width: `${tasks.length ? (statusBreakdown.Done / tasks.length) * 100 : 0}%` }} className="bg-status-done" />
-          <div style={{ width: `${tasks.length ? (statusBreakdown.InProgress / tasks.length) * 100 : 0}%` }} className="bg-status-progress" />
-          <div style={{ width: `${tasks.length ? (statusBreakdown.NotStarted / tasks.length) * 100 : 0}%` }} className="bg-status-todo" />
-          <div style={{ width: `${tasks.length ? ((statusBreakdown.Blocked + statusBreakdown.Deleted) / tasks.length) * 100 : 0}%` }} className="bg-status-cancelled" />
+          <div style={{ width: `${totalAllTasks ? ((sb?.done ?? 0) / totalAllTasks) * 100 : 0}%` }} className="bg-status-done" />
+          <div style={{ width: `${totalAllTasks ? ((sb?.inProgress ?? 0) / totalAllTasks) * 100 : 0}%` }} className="bg-status-progress" />
+          <div style={{ width: `${totalAllTasks ? ((sb?.notStarted ?? 0) / totalAllTasks) * 100 : 0}%` }} className="bg-status-todo" />
+          <div style={{ width: `${totalAllTasks ? (((sb?.blocked ?? 0) + (sb?.deleted ?? 0)) / totalAllTasks) * 100 : 0}%` }} className="bg-status-cancelled" />
         </div>
       </div>
 
@@ -143,12 +111,12 @@ const OverviewPage = () => {
             <p className="text-[13px] font-semibold tracking-tight">
               {lang === "pl" ? "Nadchodzące zadania" : "Upcoming tasks"}
             </p>
-            <p className="text-[11px] text-muted-foreground font-mono">{upcoming.length}</p>
+            <p className="text-[11px] text-muted-foreground font-mono">{overview?.upcomingTasks?.length ?? 0}</p>
           </div>
-          {upcoming.length === 0 ? (
+          {!overview?.upcomingTasks?.length ? (
             <p className="text-center text-muted-foreground text-[13px] py-8">—</p>
           ) : (
-            upcoming.map(task => (
+            overview.upcomingTasks.map(task => (
               <div
                 key={task.id}
                 className="grid gap-2.5 py-2 border-t border-border items-center cursor-pointer hover:bg-secondary -mx-5 px-5 transition-colors"
@@ -156,7 +124,7 @@ const OverviewPage = () => {
                 onClick={() => navigate("/tasks")}
               >
                 <span className="font-mono text-[11px] text-muted-foreground">{task.completeDate}</span>
-                <span className="text-[12.5px]">{task.task}</span>
+                <span className="text-[12.5px]">{task.title}</span>
                 <Avatars people={task.who} />
               </div>
             ))
@@ -169,16 +137,15 @@ const OverviewPage = () => {
             <p className="text-[13px] font-semibold tracking-tight">
               {lang === "pl" ? "Magazyn" : "Inventory"}
             </p>
-            <p className="text-[11px] text-muted-foreground font-mono">{items.length} {lang === "pl" ? "pozycji" : "items"}</p>
+            <p className="text-[11px] text-muted-foreground font-mono">{overview?.warehouseItems ?? 0} {lang === "pl" ? "pozycji" : "items"}</p>
           </div>
-          {locations.map(loc => {
-            const c = items.filter(it => it.location === loc).length;
-            const pct = (c / items.length) * 100;
+          {overview?.warehouseByLocation?.map(({ location, count }) => {
+            const pct = (count / (overview.warehouseItems || 1)) * 100;
             return (
-              <div key={loc} className="mb-2.5">
+              <div key={location} className="mb-2.5">
                 <div className="flex justify-between text-[12px] mb-1">
-                  <span>{loc}</span>
-                  <span className="font-mono text-muted-foreground">{c}</span>
+                  <span>{location}</span>
+                  <span className="font-mono text-muted-foreground">{count}</span>
                 </div>
                 <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                   <div style={{ width: `${pct}%` }} className="h-full bg-brand" />

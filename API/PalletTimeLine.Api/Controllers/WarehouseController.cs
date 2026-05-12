@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PalletTimeLine.Api.Data;
-using PalletTimeLine.Api.DTOs;
+using PalletTimeLine.Api.Application.DTOs;
+using PalletTimeLine.Api.Application.Services;
 
 namespace PalletTimeLine.Api.Controllers;
 
@@ -9,20 +8,15 @@ namespace PalletTimeLine.Api.Controllers;
 [Route("api/[controller]")]
 public class WarehouseController : ControllerBase
 {
-    private readonly PalletTimelineDbContext _db;
+    private readonly IWarehouseService _warehouseService;
 
-    public WarehouseController(PalletTimelineDbContext db)
+    public WarehouseController(IWarehouseService warehouseService)
     {
-        _db = db;
+        _warehouseService = warehouseService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<WarehouseItemDto>>> GetWarehouseItems()
-    {
-        var items = await _db.WarehouseItems.AsNoTracking()
-            .Select(i => new WarehouseItemDto(i.Id, i.Name, i.Qty, i.Unit, i.Location, i.Category, i.Note))
-            .ToListAsync();
-
-        return Ok(items);
-    }
+    [ProducesResponseType(typeof(IEnumerable<WarehouseItemDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetWarehouseItems(CancellationToken cancellationToken)
+        => Ok(await _warehouseService.GetAllAsync(cancellationToken));
 }

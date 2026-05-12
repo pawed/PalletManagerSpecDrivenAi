@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PalletTimeLine.Api.Data;
-using PalletTimeLine.Api.DTOs;
-using PalletTimeLine.Api.Models;
+using PalletTimeLine.Api.Application.DTOs;
+using PalletTimeLine.Api.Application.Services;
 
 namespace PalletTimeLine.Api.Controllers;
 
@@ -10,157 +8,78 @@ namespace PalletTimeLine.Api.Controllers;
 [Route("api/[controller]")]
 public class TasksController : ControllerBase
 {
-    private readonly PalletTimelineDbContext _db;
+    private readonly ITaskService _taskService;
 
-    public TasksController(PalletTimelineDbContext db)
+    public TasksController(ITaskService taskService)
     {
-        _db = db;
+        _taskService = taskService;
     }
-
-    private static DateTime? ParseDateUtc(string? s) =>
-        DateTime.TryParse(s, out var d)
-            ? DateTime.SpecifyKind(d.Date, DateTimeKind.Utc)
-            : null;
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks()
+    [ProducesResponseType(typeof(IEnumerable<TaskDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTasks(CancellationToken cancellationToken)
+        => Ok(await _taskService.GetAllAsync(cancellationToken));
+
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(TaskDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetTask(Guid id, CancellationToken cancellationToken)
     {
-        var tasks = await _db.Tasks.AsNoTracking()
-            .Include(t => t.Responsible)
-            .Select(t => new TaskDto(
-                t.Id,
-                t.Title,
-                t.Responsible.Select(u => u.DisplayName).ToArray(),
-                t.CompleteDate.HasValue ? t.CompleteDate.Value.ToString("yyyy-MM-dd") : null,
-                t.Status.ToString(),
-                t.Priority.ToString(),
-                t.Category,
-                t.Description))
-            .ToListAsync();
-
-        return Ok(tasks);
-    }
-
-    [HttpGet("{id}")]
-    public async Task<ActionResult<TaskDto>> GetTask(Guid id)
-    {
-        var task = await _db.Tasks.AsNoTracking()
-            .Include(t => t.Responsible)
-            .Where(t => t.Id == id)
-            .Select(t => new TaskDto(
-                t.Id,
-                t.Title,
-                t.Responsible.Select(u => u.DisplayName).ToArray(),
-                t.CompleteDate.HasValue ? t.CompleteDate.Value.ToString("yyyy-MM-dd") : null,
-                t.Status.ToString(),
-                t.Priority.ToString(),
-                t.Category,
-                t.Description))
-            .FirstOrDefaultAsync();
-
-        return task is not null ? Ok(task) : NotFound();
-    }
-
-    [HttpPatch("{id}/status")]
-    public async Task<IActionResult> UpdateStatus(Guid id, TaskStatusUpdateDto request)
-    {
-        var task = await _db.Tasks.FindAsync(id);
-        if (task is null)
-        {
-            return NotFound();
-        }
-
-        if (!Enum.TryParse<TaskItemStatus>(request.Status, ignoreCase: true, out var newStatus))
-            return BadRequest($"Invalid status value: {request.Status}");
-
-        task.Status = newStatus;
-        await _db.SaveChangesAsync();
-
-        return NoContent();
+        var task = await _taskService.GetByIdAsync(id, cancellationToken);
+        return task is null ? NotFound() : Ok(task);
     }
 
     [HttpPost]
-    public async Task<ActionResult<TaskDto>> CreateTask(TaskCreateDto dto)
+    [ProducesResponseType(typeof(TaskDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateTask(TaskCreateDto dto, CancellationToken cancellationToken)
     {
-        if (!Enum.TryParse<TaskItemStatus>(dto.Status, ignoreCase: true, out var status))
-            return BadRequest($"Invalid status: {dto.Status}");
-        if (!Enum.TryParse<TaskItemPriority>(dto.Priority, ignoreCase: true, out var priority))
-            return BadRequest($"Invalid priority: {dto.Priority}");
-
-        var edition = await _db.Editions.FirstOrDefaultAsync();
-        if (edition is null) return BadRequest("No edition found.");
-
-        var responsible = dto.Who.Length > 0
-            ? await _db.Users.Where(u => dto.Who.Contains(u.DisplayName)).ToListAsync()
-            : [];
-
-        var task = new TaskItem
+        try
         {
-            Id = Guid.NewGuid(),
-            Title = dto.Title,
-            Description = dto.Description,
-            CompleteDate = ParseDateUtc(dto.CompleteDate),
-            Status = status,
-            Priority = priority,
-            Category = dto.Category,
-            EditionId = edition.Id,
-            Responsible = responsible
-        };
-
-        _db.Tasks.Add(task);
-        await _db.SaveChangesAsync();
-
-        var result = new TaskDto(
-            task.Id,
-            task.Title,
-            task.Responsible.Select(u => u.DisplayName).ToArray(),
-            task.CompleteDate.HasValue ? task.CompleteDate.Value.ToString("yyyy-MM-dd") : null,
-            task.Status.ToString(),
-            task.Priority.ToString(),
-            task.Category,
-            task.Description);
-
-        return CreatedAtAction(nameof(GetTask), new { id = task.Id }, result);
+            var result = await _taskService.CreateAsync(dto, cancellationToken);
+            return CreatedAtAction(nameof(GetTask), new { id = result.Id }, result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
-    [HttpPut("{id}")]
-    public async Task<ActionResult<TaskDto>> UpdateTask(Guid id, TaskUpdateDto dto)
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(TaskDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateTask(Guid id, TaskUpdateDto dto, CancellationToken cancellationToken)
     {
-        if (!Enum.TryParse<TaskItemStatus>(dto.Status, ignoreCase: true, out var status))
-            return BadRequest($"Invalid status: {dto.Status}");
-        if (!Enum.TryParse<TaskItemPriority>(dto.Priority, ignoreCase: true, out var priority))
-            return BadRequest($"Invalid priority: {dto.Priority}");
+        try
+        {
+            var result = await _taskService.UpdateAsync(id, dto, cancellationToken);
+            return result is null ? NotFound() : Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 
-        var task = await _db.Tasks.Include(t => t.Responsible).FirstOrDefaultAsync(t => t.Id == id);
-        if (task is null) return NotFound();
-
-        task.Title = dto.Title;
-        task.Description = dto.Description;
-        task.CompleteDate = ParseDateUtc(dto.CompleteDate);
-        task.Status = status;
-        task.Priority = priority;
-        task.Category = dto.Category;
-
-        var newResponsible = dto.Who.Length > 0
-            ? await _db.Users.Where(u => dto.Who.Contains(u.DisplayName)).ToListAsync()
-            : [];
-
-        task.Responsible.Clear();
-        foreach (var user in newResponsible)
-            task.Responsible.Add(user);
-
-        await _db.SaveChangesAsync();
-
-        var result = new TaskDto(
-            task.Id,
-            task.Title,
-            task.Responsible.Select(u => u.DisplayName).ToArray(),
-            task.CompleteDate.HasValue ? task.CompleteDate.Value.ToString("yyyy-MM-dd") : null,
-            task.Status.ToString(),
-            task.Priority.ToString(),
-            task.Category,
-            task.Description);
-
-        return Ok(result);
+    [HttpPatch("{id:guid}/status")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateStatus(Guid id, TaskStatusUpdateDto request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var found = await _taskService.UpdateStatusAsync(id, request, cancellationToken);
+            return found ? NoContent() : NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }

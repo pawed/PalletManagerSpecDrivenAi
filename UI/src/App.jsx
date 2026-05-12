@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 
 import { I18N } from './data/i18n';
 import { Sidebar, Topbar } from './components/Layout';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import OverviewPage  from './pages/OverviewPage';
 import TasksPage     from './pages/TasksPage';
 import CostsPage     from './pages/CostsPage';
@@ -48,14 +49,16 @@ function App() {
             : null}
         />
         <div className="p-7 pb-16 flex-1 min-w-0 overflow-y-auto">
-          <Routes>
-            <Route index element={<Navigate to="/overview" replace />} />
-            <Route path="/overview"  element={<OverviewPage />} />
-            <Route path="/tasks"     element={<TasksPage />} />
-            <Route path="/costs"     element={<CostsPage />} />
-            <Route path="/warehouse" element={<WarehousePage />} />
-            <Route path="*"          element={<Navigate to="/overview" replace />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route index element={<Navigate to="/overview" replace />} />
+              <Route path="/overview"  element={<OverviewPage />} />
+              <Route path="/tasks"     element={<TasksPage />} />
+              <Route path="/costs"     element={<CostsPage />} />
+              <Route path="/warehouse" element={<WarehousePage />} />
+              <Route path="*"          element={<Navigate to="/overview" replace />} />
+            </Routes>
+          </ErrorBoundary>
         </div>
       </div>
     </div>

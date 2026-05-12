@@ -1,35 +1,26 @@
 import React, { useMemo } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { I18N } from '../data/i18n';
 import { fmtPLN } from '../data/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { useAppContext } from '../context/AppContext';
-import * as costService    from '../services/costService.js';
-import * as revenueService from '../services/revenueService.js';
+import { useCosts } from '../hooks/useCosts.js';
+import { useRevenue } from '../hooks/useRevenue.js';
+import { queryKeys } from '../lib/queryKeys.js';
 
 const CostsPage = () => {
   const { lang } = useAppContext();
   const t = I18N[lang];
   const queryClient = useQueryClient();
 
-  const { data: costs = [], isLoading: loadingCosts, isFetching: fetchingCosts } = useQuery({
-    queryKey: ['costs'],
-    queryFn: costService.getAll,
-    staleTime: Infinity,
-    onError: err => toast.error('Błąd ładowania kosztów', { description: err.message }),
-  });
+  const { data: costs = [], isLoading: loadingCosts, isFetching: fetchingCosts } = useCosts();
+  const { data: revenue = [], isLoading: loadingRevenue } = useRevenue();
 
-  const { data: revenue = [], isLoading: loadingRevenue } = useQuery({
-    queryKey: ['revenue'],
-    queryFn: revenueService.getAll,
-    staleTime: Infinity,
-    onError: err => toast.error('Błąd ładowania przychodów', { description: err.message }),
-  });
-
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['costs'] })
-    .then(() => queryClient.invalidateQueries({ queryKey: ['revenue'] }));
+  const refresh = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.costs.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.revenue.all }),
+  ]);
 
   const totalCosts   = useMemo(() => costs.reduce((s, c)   => s + c.amount, 0), [costs]);
   const totalRevenue = useMemo(() => revenue.reduce((s, r) => s + r.amount, 0), [revenue]);

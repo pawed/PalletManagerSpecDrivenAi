@@ -239,6 +239,87 @@ public class PalletsController : ControllerBase
 - Use custom domain exceptions (`NotFoundException`, `ValidationException`, `ConflictException`)
 - Map exceptions to appropriate HTTP status codes in middleware
 
+## Production Observability
+
+Senior engineers always think about what happens after deployment. Every production-grade API must have structured logging, distributed tracing, and metrics from day one.
+
+### Structured Logging with Serilog
+
+Use Serilog as the logging backend — it supports structured (JSON) output, enrichers, and sinks for production systems.
+
+```csharp
+// Program.cs
+builder.Host.UseSerilog((ctx, cfg) =>
+{
+    cfg.ReadFrom.Configuration(ctx.Configuration)
+       .Enrich.FromLogContext()
+       .Enrich.WithMachineName()
+       .Enrich.WithProperty("Application", "PalletManager")
+       .WriteTo.Console(new RenderedCompactJsonFormatter())
+       .WriteTo.OpenTelemetry(); // bridge to OTLP collector
+});
+```
+
+**Rules:**
+- Always log with message templates, never string interpolation: `Log.Information("Pallet {PalletId} created", id)` — not `$"Pallet {id} created"`
+- Enrich logs with correlation IDs (trace/span ID) via `Enrich.WithSpanId()` / `Enrich.WithTraceId()`
+- Use appropriate log levels: `Debug` for dev noise, `Information` for business events, `Warning` for recoverable issues, `Error` for exceptions
+- Avoid logging sensitive data (passwords, tokens, PII)
+
+### OpenTelemetry (.NET 10)
+
+OpenTelemetry is the industry standard for distributed tracing and metrics. Register it in the infrastructure setup:
+
+```csharp
+// Program.cs — OpenTelemetry setup
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r
+        .AddService("PalletManager.API", serviceVersion: "1.0.0")
+        .AddTelemetrySdk())
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation(opts => opts.RecordException = true)
+        .AddEntityFrameworkCoreInstrumentation(opts => opts.SetDbStatementForText = true)
+        .AddHttpClientInstrumentation()
+        .AddOtlpExporter())
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddProcessInstrumentation()
+        .AddOtlpExporter());
+```
+
+**Custom business metrics** — define application-specific meters for domain events:
+
+```csharp
+public class PalletMetrics
+{
+    private readonly Counter<long> _palletsCreated;
+    private readonly Histogram<double> _palletProcessingDuration;
+
+    public PalletMetrics(IMeterFactory meterFactory)
+    {
+        var meter = meterFactory.Create("PalletManager.Domain");
+        _palletsCreated = meter.CreateCounter<long>("pallets.created.total");
+        _palletProcessingDuration = meter.CreateHistogram<double>("pallets.processing.duration.ms");
+    }
+
+    public void RecordPalletCreated(string warehouseId) =>
+        _palletsCreated.Add(1, new KeyValuePair<string, object?>("warehouse_id", warehouseId));
+}
+```
+
+**Required packages:**
+```xml
+<PackageReference Include="Serilog.AspNetCore" Version="*" />
+<PackageReference Include="Serilog.Enrichers.Span" Version="*" />
+<PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="*" />
+<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="*" />
+<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="*" />
+<PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="*" />
+<PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="*" />
+<PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="*" />
+```
+
 ## Code Quality Requirements
 - **Naming**: PascalCase for types/methods, camelCase for locals, snake_case for PostgreSQL objects
 - **Async**: Every I/O operation must be async with `CancellationToken` propagation
@@ -267,6 +348,10 @@ Before finalizing any implementation, verify:
 - [ ] No direct DbContext usage outside Infrastructure layer
 - [ ] Scalar/OpenAPI attributes on all endpoints
 - [ ] snake_case naming convention applied to PostgreSQL schema
+- [ ] Serilog configured with structured output and context enrichers
+- [ ] OpenTelemetry registered (tracing + metrics) with OTLP exporter
+- [ ] Message templates used in all log calls (no string interpolation)
+- [ ] Sensitive data excluded from logs and traces
 
 ## Output Standards
 - Provide complete, compilable code files with proper namespaces

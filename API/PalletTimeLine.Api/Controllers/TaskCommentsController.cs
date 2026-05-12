@@ -1,139 +1,71 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PalletTimeLine.Api.Data;
-using PalletTimeLine.Api.DTOs;
-using PalletTimeLine.Api.Models;
-using PalletTimeLine.Api.Services;
+using PalletTimeLine.Api.Application.DTOs;
+using PalletTimeLine.Api.Application.Services;
 
 namespace PalletTimeLine.Api.Controllers;
 
 [ApiController]
-[Route("api/tasks/{taskId}/comments")]
+[Route("api/tasks/{taskId:guid}/comments")]
 public class TaskCommentsController : ControllerBase
 {
-    private readonly PalletTimelineDbContext _db;
-    private readonly IAuditService _audit;
+    private readonly ITaskCommentService _commentService;
 
-    public TaskCommentsController(PalletTimelineDbContext db, IAuditService audit)
+    public TaskCommentsController(ITaskCommentService commentService)
     {
-        _db = db;
-        _audit = audit;
+        _commentService = commentService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TaskCommentDto>>> GetComments(Guid taskId)
+    [ProducesResponseType(typeof(IEnumerable<TaskCommentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetComments(Guid taskId, CancellationToken cancellationToken)
     {
-        var taskExists = await _db.Tasks.AnyAsync(t => t.Id == taskId);
-        if (!taskExists)
+        if (!await _commentService.TaskExistsAsync(taskId, cancellationToken))
             return NotFound();
 
-        var comments = await _db.TaskComments.AsNoTracking()
-            .Where(c => c.TaskItemId == taskId)
-            .OrderByDescending(c => c.CreatedAt)
-            .Select(c => new TaskCommentDto(
-                c.Id,
-                c.Content,
-                c.AuthorId,
-                c.Author.DisplayName,
-                c.CreatedAt,
-                c.UpdatedAt))
-            .ToListAsync();
-
-        return Ok(comments);
+        return Ok(await _commentService.GetByTaskAsync(taskId, cancellationToken));
     }
 
-    [HttpGet("{id}")]
-    public async Task<ActionResult<TaskCommentDto>> GetComment(Guid taskId, Guid id)
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(TaskCommentDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetComment(Guid taskId, Guid id, CancellationToken cancellationToken)
     {
-        var comment = await _db.TaskComments.AsNoTracking()
-            .Where(c => c.Id == id && c.TaskItemId == taskId)
-            .Select(c => new TaskCommentDto(
-                c.Id,
-                c.Content,
-                c.AuthorId,
-                c.Author.DisplayName,
-                c.CreatedAt,
-                c.UpdatedAt))
-            .FirstOrDefaultAsync();
-
-        return comment is not null ? Ok(comment) : NotFound();
+        var comment = await _commentService.GetByIdAsync(taskId, id, cancellationToken);
+        return comment is null ? NotFound() : Ok(comment);
     }
 
     [HttpPost]
-    public async Task<ActionResult<TaskCommentDto>> CreateComment(Guid taskId, TaskCommentCreateDto request)
+    [ProducesResponseType(typeof(TaskCommentDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateComment(Guid taskId, TaskCommentCreateDto request, CancellationToken cancellationToken)
     {
-        var taskExists = await _db.Tasks.AnyAsync(t => t.Id == taskId);
-        if (!taskExists)
+        if (!await _commentService.TaskExistsAsync(taskId, cancellationToken))
             return NotFound();
 
-        var author = await _db.Users.FindAsync(request.AuthorId);
-        if (author is null)
+        var dto = await _commentService.CreateAsync(taskId, request, cancellationToken);
+        if (dto is null)
             return BadRequest("Author not found.");
 
-        var comment = new TaskComment
-        {
-            TaskItemId = taskId,
-            Content = request.Content,
-            AuthorId = request.AuthorId,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _db.TaskComments.Add(comment);
-        await _db.SaveChangesAsync();
-
-        await _audit.LogCreateAsync("TaskComment", comment.Id, comment, request.AuthorId);
-
-        var dto = new TaskCommentDto(
-            comment.Id,
-            comment.Content,
-            comment.AuthorId,
-            author.DisplayName,
-            comment.CreatedAt,
-            comment.UpdatedAt);
-
-        return CreatedAtAction(nameof(GetComment), new { taskId, id = comment.Id }, dto);
+        return CreatedAtAction(nameof(GetComment), new { taskId, id = dto.Id }, dto);
     }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateComment(Guid taskId, Guid id, TaskCommentUpdateDto request)
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateComment(Guid taskId, Guid id, TaskCommentUpdateDto request, CancellationToken cancellationToken)
     {
-        var comment = await _db.TaskComments
-            .Where(c => c.Id == id && c.TaskItemId == taskId)
-            .FirstOrDefaultAsync();
-
-        if (comment is null)
-            return NotFound();
-
-        var oldContent = comment.Content;
-
-        comment.Content = request.Content;
-        comment.UpdatedAt = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync();
-
-        await _audit.LogUpdateAsync("TaskComment", comment.Id,
-            new { Content = oldContent },
-            new { request.Content },
-            comment.AuthorId);
-
-        return NoContent();
+        var found = await _commentService.UpdateAsync(taskId, id, request, cancellationToken);
+        return found ? NoContent() : NotFound();
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteComment(Guid taskId, Guid id)
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteComment(Guid taskId, Guid id, CancellationToken cancellationToken)
     {
-        var comment = await _db.TaskComments
-            .Where(c => c.Id == id && c.TaskItemId == taskId)
-            .FirstOrDefaultAsync();
-
-        if (comment is null)
-            return NotFound();
-
-        _db.TaskComments.Remove(comment);
-        await _db.SaveChangesAsync();
-
-        await _audit.LogDeleteAsync("TaskComment", comment.Id, comment, comment.AuthorId);
-
-        return NoContent();
+        var found = await _commentService.DeleteAsync(taskId, id, cancellationToken);
+        return found ? NoContent() : NotFound();
     }
 }
