@@ -23,7 +23,10 @@ export function useUpdateTaskStatus() {
       return { prev };
     },
     onError: (_, __, ctx) => qc.setQueryData(queryKeys.tasks.all, ctx.prev),
-    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.tasks.all }),
+    onSettled: () => Promise.all([
+      qc.invalidateQueries({ queryKey: queryKeys.tasks.all }),
+      qc.invalidateQueries({ queryKey: queryKeys.overview.all }),
+    ]),
   });
 }
 
@@ -31,7 +34,10 @@ export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data) => taskService.create(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.tasks.all }),
+    onSuccess: () => Promise.all([
+      qc.invalidateQueries({ queryKey: queryKeys.tasks.all }),
+      qc.invalidateQueries({ queryKey: queryKeys.overview.all }),
+    ]),
   });
 }
 
@@ -39,6 +45,9 @@ export function useUpdateTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => taskService.update(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.tasks.all }),
+    onSuccess: () => Promise.all([
+      qc.invalidateQueries({ queryKey: queryKeys.tasks.all }),
+      qc.invalidateQueries({ queryKey: queryKeys.overview.all }),
+    ]),
   });
 }

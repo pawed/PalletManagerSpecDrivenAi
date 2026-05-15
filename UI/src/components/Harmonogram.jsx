@@ -255,7 +255,7 @@ const Harmonogram = ({ lang, tasks }) => {
   };
 
   useEffect(() => {
-    userService.getPeopleNames().then(setPeople).catch(() => {});
+    userService.getPeople().then(setPeople).catch(() => {});
   }, []);
 
   useEffect(() => { try { localStorage.setItem(LS_STEP,  String(windowDays)); }    catch (e) {} }, [windowDays]);
@@ -556,8 +556,8 @@ const Harmonogram = ({ lang, tasks }) => {
                         {lang === "pl" ? "Nieprzypisane" : "Unassigned"}
                       </span>
                     ) : task.who.map(w => (
-                      <span key={w} className="font-mono text-[10.5px] bg-card/60 text-muted-foreground px-1.5 py-0.5 rounded">
-                        {w}
+                      <span key={typeof w === 'object' ? w.id : w} className="font-mono text-[10.5px] bg-card/60 text-muted-foreground px-1.5 py-0.5 rounded">
+                        {typeof w === 'object' ? w.displayName : w}
                       </span>
                     ))}
                   </div>

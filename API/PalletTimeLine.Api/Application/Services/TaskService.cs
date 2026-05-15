@@ -8,10 +8,12 @@ namespace PalletTimeLine.Api.Application.Services;
 public class TaskService : ITaskService
 {
     private readonly PalletTimelineDbContext _db;
+    private readonly IAuditService _audit;
 
-    public TaskService(PalletTimelineDbContext db)
+    public TaskService(PalletTimelineDbContext db, IAuditService audit)
     {
         _db = db;
+        _audit = audit;
     }
 
     private static DateTime? ParseDateUtc(string? s) =>
@@ -22,7 +24,7 @@ public class TaskService : ITaskService
     private static TaskDto MapToDto(TaskItem t) => new(
         t.Id,
         t.Title,
-        t.Responsible.Select(u => u.DisplayName).ToArray(),
+        t.Responsible.Select(u => new WhoDto(u.Id, u.DisplayName)).ToArray(),
         t.CompleteDate.HasValue ? t.CompleteDate.Value.ToString("yyyy-MM-dd") : null,
         t.Status.ToString(),
         t.Priority.ToString(),
@@ -36,7 +38,7 @@ public class TaskService : ITaskService
             .Select(t => new TaskDto(
                 t.Id,
                 t.Title,
-                t.Responsible.Select(u => u.DisplayName).ToArray(),
+                t.Responsible.Select(u => new WhoDto(u.Id, u.DisplayName)).ToArray(),
                 t.CompleteDate.HasValue ? t.CompleteDate.Value.ToString("yyyy-MM-dd") : null,
                 t.Status.ToString(),
                 t.Priority.ToString(),
@@ -53,7 +55,7 @@ public class TaskService : ITaskService
             .Select(t => new TaskDto(
                 t.Id,
                 t.Title,
-                t.Responsible.Select(u => u.DisplayName).ToArray(),
+                t.Responsible.Select(u => new WhoDto(u.Id, u.DisplayName)).ToArray(),
                 t.CompleteDate.HasValue ? t.CompleteDate.Value.ToString("yyyy-MM-dd") : null,
                 t.Status.ToString(),
                 t.Priority.ToString(),
@@ -71,7 +73,9 @@ public class TaskService : ITaskService
             ?? throw new InvalidOperationException("No edition found.");
 
         var responsible = dto.Who.Length > 0
-            ? await _db.Users.Where(u => dto.Who.Contains(u.DisplayName)).ToListAsync(ct)
+            ? await _db.Users
+                .Where(u => dto.Who.Contains(u.Id) && !u.IsSystemOnly && u.IsActive)
+                .ToListAsync(ct)
             : [];
 
         var task = new TaskItem
@@ -89,6 +93,7 @@ public class TaskService : ITaskService
 
         _db.Tasks.Add(task);
         await _db.SaveChangesAsync(ct);
+        await _audit.LogCreateAsync("TaskItem", task.Id, new { task.Title, task.Status, task.Category }, SeedData.SystemUserId, ct);
 
         return MapToDto(task);
     }
@@ -104,6 +109,8 @@ public class TaskService : ITaskService
 
         if (task is null) return null;
 
+        var oldStatus = task.Status.ToString();
+
         task.Title = dto.Title;
         task.Description = dto.Description;
         task.CompleteDate = ParseDateUtc(dto.CompleteDate);
@@ -112,14 +119,18 @@ public class TaskService : ITaskService
         task.Category = dto.Category;
 
         var newResponsible = dto.Who.Length > 0
-            ? await _db.Users.Where(u => dto.Who.Contains(u.DisplayName)).ToListAsync(ct)
+            ? await _db.Users
+                .Where(u => dto.Who.Contains(u.Id) && !u.IsSystemOnly && u.IsActive)
+                .ToListAsync(ct)
             : [];
 
+        //tak musi byc bo inaczej EF straci relacje i nie bêdzie aktualizowa³ tabeli ³¹cz¹cej
         task.Responsible.Clear();
         foreach (var user in newResponsible)
             task.Responsible.Add(user);
 
         await _db.SaveChangesAsync(ct);
+        await _audit.LogUpdateAsync("TaskItem", id, new { Status = oldStatus }, new { Status = dto.Status }, SeedData.SystemUserId, ct);
 
         return MapToDto(task);
     }
@@ -129,8 +140,10 @@ public class TaskService : ITaskService
         var task = await _db.Tasks.FindAsync([id], ct);
         if (task is null) return false;
 
+        var oldStatus = task.Status.ToString();
         task.Status = Enum.Parse<TaskItemStatus>(dto.Status, ignoreCase: true);
         await _db.SaveChangesAsync(ct);
+        await _audit.LogUpdateAsync("TaskItem", id, new { Status = oldStatus }, new { dto.Status }, SeedData.SystemUserId, ct);
         return true;
     }
 }

@@ -5,6 +5,7 @@ namespace PalletTimeLine.Api.Infrastructure.Data;
 internal static class SeedData
 {
     private static readonly Guid Ed2025Id = new Guid("99999999-8888-7777-6666-555555555555");
+    internal static readonly Guid SystemUserId = new Guid("00000000-0000-0000-0000-000000000001");
 
     internal static readonly EditionItem[] Editions =
     {
@@ -22,11 +23,12 @@ internal static class SeedData
 
     internal static readonly User[] Users =
     {
-        new User { Id = new Guid("11111111-1111-1111-1111-111111111111"), FirstName = "Konrad",   LastName = "Kowalski", UserName = "konrad",   DisplayName = "Konrad",   IsActive = true },
-        new User { Id = new Guid("22222222-2222-2222-2222-222222222222"), FirstName = "Stalowy",  LastName = "Bizon",    UserName = "stalowy",  DisplayName = "Stalowy",  IsActive = true },
-        new User { Id = new Guid("33333333-3333-3333-3333-333333333333"), FirstName = "Kinia",    LastName = "Nowak",    UserName = "kinia",    DisplayName = "Kinia",    IsActive = true },
-        new User { Id = new Guid("44444444-4444-4444-4444-444444444444"), FirstName = "Asia",     LastName = "Nowak",    UserName = "asia",     DisplayName = "Asia",     IsActive = true },
-        new User { Id = new Guid("55555555-5555-5555-5555-555555555555"), FirstName = "Radosław", LastName = "Nowak",    UserName = "radoslaw", DisplayName = "Radosław", IsActive = true },
+        new User { Id = SystemUserId,                                     FirstName = "System",   LastName = "",         UserName = "system",   DisplayName = "System",   IsActive = false, IsSystemOnly = true  },
+        new User { Id = new Guid("11111111-1111-1111-1111-111111111111"), FirstName = "Konrad",   LastName = "Kowalski", UserName = "konrad",   DisplayName = "Konrad",   IsActive = true,  IsSystemOnly = false },
+        new User { Id = new Guid("22222222-2222-2222-2222-222222222222"), FirstName = "Stalowy",  LastName = "Bizon",    UserName = "stalowy",  DisplayName = "Stalowy",  IsActive = true,  IsSystemOnly = false },
+        new User { Id = new Guid("33333333-3333-3333-3333-333333333333"), FirstName = "Kinia",    LastName = "Nowak",    UserName = "kinia",    DisplayName = "Kinia",    IsActive = true,  IsSystemOnly = false },
+        new User { Id = new Guid("44444444-4444-4444-4444-444444444444"), FirstName = "Asia",     LastName = "Nowak",    UserName = "asia",     DisplayName = "Asia",     IsActive = true,  IsSystemOnly = false },
+        new User { Id = new Guid("55555555-5555-5555-5555-555555555555"), FirstName = "Radosław", LastName = "Nowak",    UserName = "radoslaw", DisplayName = "Radosław", IsActive = true,  IsSystemOnly = false },
     };
 
     internal static readonly TaskItem[] Tasks =
@@ -57,29 +59,29 @@ internal static class SeedData
 
     internal static readonly TaskUserAssignment[] TaskUserAssignments =
     {
-        new(Tasks[0].Id,  Users[0].Id),
-        new(Tasks[1].Id,  Users[0].Id),
-        new(Tasks[2].Id,  Users[0].Id),
-        new(Tasks[3].Id,  Users[0].Id),
-        new(Tasks[4].Id,  Users[0].Id),
-        new(Tasks[5].Id,  Users[0].Id),
-        new(Tasks[6].Id,  Users[0].Id),
-        new(Tasks[7].Id,  Users[1].Id),
-        new(Tasks[8].Id,  Users[0].Id),
-        new(Tasks[9].Id,  Users[1].Id),
-        new(Tasks[10].Id, Users[2].Id),
+        new(Tasks[0].Id,  Users[1].Id),
+        new(Tasks[1].Id,  Users[1].Id),
+        new(Tasks[2].Id,  Users[1].Id),
+        new(Tasks[3].Id,  Users[1].Id),
+        new(Tasks[4].Id,  Users[1].Id),
+        new(Tasks[5].Id,  Users[1].Id),
+        new(Tasks[6].Id,  Users[1].Id),
+        new(Tasks[7].Id,  Users[2].Id),
+        new(Tasks[8].Id,  Users[1].Id),
+        new(Tasks[9].Id,  Users[2].Id),
         new(Tasks[10].Id, Users[3].Id),
-        new(Tasks[11].Id, Users[2].Id),
+        new(Tasks[10].Id, Users[4].Id),
         new(Tasks[11].Id, Users[3].Id),
-        new(Tasks[12].Id, Users[2].Id),
+        new(Tasks[11].Id, Users[4].Id),
         new(Tasks[12].Id, Users[3].Id),
-        new(Tasks[13].Id, Users[4].Id),
-        new(Tasks[14].Id, Users[4].Id),
-        new(Tasks[15].Id, Users[1].Id),
-        new(Tasks[16].Id, Users[1].Id),
-        new(Tasks[17].Id, Users[1].Id),
-        new(Tasks[18].Id, Users[1].Id),
-        new(Tasks[19].Id, Users[0].Id),
+        new(Tasks[12].Id, Users[4].Id),
+        new(Tasks[13].Id, Users[5].Id),
+        new(Tasks[14].Id, Users[5].Id),
+        new(Tasks[15].Id, Users[2].Id),
+        new(Tasks[16].Id, Users[2].Id),
+        new(Tasks[17].Id, Users[2].Id),
+        new(Tasks[18].Id, Users[2].Id),
+        new(Tasks[19].Id, Users[1].Id),
     };
 
     internal static readonly CostItem[] Costs =

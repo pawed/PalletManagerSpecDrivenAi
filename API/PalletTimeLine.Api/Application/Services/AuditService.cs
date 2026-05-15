@@ -1,22 +1,21 @@
 using System.Text.Json;
 using PalletTimeLine.Api.Domain.Entities;
-using PalletTimeLine.Api.Infrastructure.Data;
 
 namespace PalletTimeLine.Api.Application.Services;
 
 /// <summary>
 /// Implementacja serwisu audytu.
-/// KLUCZOWE: żadna metoda NIE wywołuje SaveChangesAsync — odpowiada za to caller.
-/// Dzięki temu audit log i operacja biznesowa są w jednej transakcji.
+/// Wpisy trafiają do IAuditQueue i są zapisywane asynchronicznie przez AuditBackgroundService.
+/// Nie blokuje odpowiedzi HTTP — żadna metoda nie wywołuje SaveChangesAsync.
 /// </summary>
 public class AuditService : IAuditService
 {
-    private readonly PalletTimelineDbContext _dbContext;
+    private readonly IAuditQueue _queue;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
 
-    public AuditService(PalletTimelineDbContext dbContext)
+    public AuditService(IAuditQueue queue)
     {
-        _dbContext = dbContext;
+        _queue = queue;
     }
 
     public Task LogCreateAsync(string entityType, Guid entityId, object entity, Guid changedBy, CancellationToken cancellationToken = default)
@@ -69,7 +68,7 @@ public class AuditService : IAuditService
 
     public Task LogAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
     {
-        _dbContext.AuditLogs.Add(auditLog);
+        _queue.Enqueue(auditLog);
         return Task.CompletedTask;
     }
 

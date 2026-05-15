@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PalletTimeLine.Api.Infrastructure.Data;
@@ -11,9 +12,11 @@ using PalletTimeLine.Api.Infrastructure.Data;
 namespace PalletTimeLine.Api.Migrations
 {
     [DbContext(typeof(PalletTimelineDbContext))]
-    partial class PalletTimelineDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260512141255_AddSystemUser")]
+    partial class AddSystemUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -569,11 +572,6 @@ namespace PalletTimeLine.Api.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsSystemOnly")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -595,7 +593,6 @@ namespace PalletTimeLine.Api.Migrations
                             DisplayName = "System",
                             FirstName = "System",
                             IsActive = false,
-                            IsSystemOnly = true,
                             LastName = "",
                             UserName = "system"
                         },
@@ -605,7 +602,6 @@ namespace PalletTimeLine.Api.Migrations
                             DisplayName = "Konrad",
                             FirstName = "Konrad",
                             IsActive = true,
-                            IsSystemOnly = false,
                             LastName = "Kowalski",
                             UserName = "konrad"
                         },
@@ -615,7 +611,6 @@ namespace PalletTimeLine.Api.Migrations
                             DisplayName = "Stalowy",
                             FirstName = "Stalowy",
                             IsActive = true,
-                            IsSystemOnly = false,
                             LastName = "Bizon",
                             UserName = "stalowy"
                         },
@@ -625,7 +620,6 @@ namespace PalletTimeLine.Api.Migrations
                             DisplayName = "Kinia",
                             FirstName = "Kinia",
                             IsActive = true,
-                            IsSystemOnly = false,
                             LastName = "Nowak",
                             UserName = "kinia"
                         },
@@ -635,7 +629,6 @@ namespace PalletTimeLine.Api.Migrations
                             DisplayName = "Asia",
                             FirstName = "Asia",
                             IsActive = true,
-                            IsSystemOnly = false,
                             LastName = "Nowak",
                             UserName = "asia"
                         },
@@ -645,7 +638,6 @@ namespace PalletTimeLine.Api.Migrations
                             DisplayName = "Radosław",
                             FirstName = "Radosław",
                             IsActive = true,
-                            IsSystemOnly = false,
                             LastName = "Nowak",
                             UserName = "radoslaw"
                         });

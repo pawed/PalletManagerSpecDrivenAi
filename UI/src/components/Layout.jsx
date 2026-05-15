@@ -129,19 +129,23 @@ export const Avatars = ({ people }) => {
 
   return (
     <div className="flex">
-      {people.slice(0, 3).map((p, i) => (
-        <div
-          key={p}
-          className="w-[22px] h-[22px] rounded-full border-[1.5px] border-card grid place-items-center text-[10px] font-semibold font-mono text-foreground"
-          style={{
-            background: `oklch(0.92 0.04 ${(p.charCodeAt(0) * 7) % 360})`,
-            marginLeft: i === 0 ? 0 : -5,
-          }}
-          title={p}
-        >
-          {p.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase()}
-        </div>
-      ))}
+      {people.slice(0, 3).map((p, i) => {
+        const name = typeof p === 'object' ? p.displayName : p;
+        const key  = typeof p === 'object' ? p.id : p;
+        return (
+          <div
+            key={key}
+            className="w-[22px] h-[22px] rounded-full border-[1.5px] border-card grid place-items-center text-[10px] font-semibold font-mono text-foreground"
+            style={{
+              background: `oklch(0.92 0.04 ${(name.charCodeAt(0) * 7) % 360})`,
+              marginLeft: i === 0 ? 0 : -5,
+            }}
+            title={name}
+          >
+            {name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+          </div>
+        );
+      })}
       {people.length > 3 && (
         <div className="w-[22px] h-[22px] rounded-full bg-secondary border-[1.5px] border-card grid place-items-center text-[10px] font-semibold font-mono -ml-[5px]">
           +{people.length - 3}

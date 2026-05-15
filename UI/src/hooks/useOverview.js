@@ -6,6 +6,6 @@ export function useOverview() {
   return useQuery({
     queryKey: queryKeys.overview.all,
     queryFn: () => get('/Overview'),
-    staleTime: 60 * 1000,
+    staleTime: 60 * 10000,
   });
 }

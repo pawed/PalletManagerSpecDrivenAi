@@ -21,3 +21,4 @@ public record UserUpdateDto(
     string UserName,
     string DisplayName,
     bool IsActive);
+

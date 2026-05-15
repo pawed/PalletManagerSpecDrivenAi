@@ -29,7 +29,10 @@ const TasksPage = () => {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
 
-  const personOptions = people.map(p => ({ value: p, label: p }));
+  const personOptions = people.map(p => (typeof p === 'object'
+    ? { value: p.id, label: p.displayName }
+    : { value: p, label: p }
+  ));
   const statusOptions = [
     { value: "NotStarted", label: t.notStarted },
     { value: "InProgress", label: t.inProgress },
@@ -39,7 +42,7 @@ const TasksPage = () => {
   ];
 
   const filtered = useMemo(() => tasks.filter(task => {
-    if (filterPersons.length    > 0 && !task.who.some(w => filterPersons.includes(w))) return false;
+    if (filterPersons.length    > 0 && !task.who.some(w => filterPersons.includes(typeof w === 'object' ? w.id : w))) return false;
     if (filterCategories.length > 0 && !filterCategories.includes(task.category))      return false;
     if (filterStatuses.length   > 0 && !filterStatuses.includes(task.status))          return false;
     if (query && !task.task.toLowerCase().includes(query.toLowerCase()) &&

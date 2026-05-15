@@ -1,11 +1,12 @@
 // Task service — maps GET /api/Tasks and PATCH /api/Tasks/{id}/status
 // API TaskDto fields:
-//   id (uuid), title, who (string[]|null), completeDate (string|null),
+//   id (uuid), title, who ({ id, displayName }[]|null), completeDate (string|null),
 //   status (enum name: NotStarted|InProgress|Done|Blocked|Deleted),
 //   priority (enum name: Critical|High|Ordinary|Low|NiceToHave),
 //   category, description (string|null)
 //
 // Backend enum names are used as-is throughout the UI (source of truth).
+// who is sent as Guid[] (array of user IDs), received as { id, displayName }[].
 import { get, patch, post, put } from './api.js';
 
 // Normalise a single API TaskDto — field renames only, no status mapping.
@@ -37,7 +38,7 @@ export const create = (data) => {
     status:       data.status   ?? 'NotStarted',
     priority:     data.priority ?? 'Ordinary',
     category:     data.category,
-    who:          data.who ?? [],
+    who:          (data.who ?? []).map((w) => (typeof w === 'object' ? w.id : w)),
   };
   return post('/Tasks', body).then(normalise);
 };
@@ -50,7 +51,7 @@ export const update = (id, data) => {
     status:       data.status   ?? 'NotStarted',
     priority:     data.priority ?? 'Ordinary',
     category:     data.category,
-    who:          data.who ?? [],
+    who:          (data.who ?? []).map((w) => (typeof w === 'object' ? w.id : w)),
   };
   return put(`/Tasks/${id}`, body).then(normalise);
 };

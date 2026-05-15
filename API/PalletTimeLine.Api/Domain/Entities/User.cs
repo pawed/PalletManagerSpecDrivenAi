@@ -8,6 +8,7 @@ public class User
     public string UserName { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
+    public bool IsSystemOnly { get; set; } = false;
 
     public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
 }

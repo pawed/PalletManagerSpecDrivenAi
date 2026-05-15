@@ -31,7 +31,7 @@ const TaskModal = ({ mode, task, people, onClose, onSave }) => {
     status:       isEdit ? (task.status ?? 'NotStarted') : 'NotStarted',
     completeDate: isEdit ? (task.completeDate ?? '') : '',
     category:     isEdit ? (task.category ?? TASK_CATEGORIES[0]?.id ?? '') : (TASK_CATEGORIES[0]?.id ?? ''),
-    who:          isEdit ? [...(task.who ?? [])] : [],
+    who:          isEdit ? (task.who ?? []).map((w) => (typeof w === 'object' ? w.id : w)) : [],
     note:         isEdit ? (task.note ?? '') : '',
   }));
   const [errors,  setErrors]  = useState({});
@@ -84,7 +84,10 @@ const TaskModal = ({ mode, task, people, onClose, onSave }) => {
     }
   };
 
-  const personOptions = people.map(p => ({ value: p, label: p }));
+  const personOptions = people.map(p => (typeof p === 'object'
+    ? { value: p.id, label: p.displayName }
+    : { value: p, label: p }
+  ));
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
